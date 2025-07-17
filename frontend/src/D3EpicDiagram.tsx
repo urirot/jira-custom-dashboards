@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useState } from "react";
 import { D3EpicDiagramProps } from "./types";
 import { getJiraUrl, getTextColor, wrapText } from "./utils/d3Utils";
 import TicketBox from "./components/TicketBox";
@@ -14,11 +14,11 @@ import {
 } from "./constants";
 import { computeDiagramLayout } from "./layoutUtils";
 import { useLinkIssue } from "./utils/useLinkIssue";
+import axios from "axios";
 
-export const D3EpicDiagram: React.FC<D3EpicDiagramProps> = ({
-  tickets,
-  onRefresh,
-}) => {
+export const D3EpicDiagram: React.FC<
+  D3EpicDiagramProps & { onRendered?: () => void }
+> = ({ tickets, onRefresh, onRendered }) => {
   // Use the new layout utility
   const layout = computeDiagramLayout(tickets);
   const {
@@ -34,7 +34,6 @@ export const D3EpicDiagram: React.FC<D3EpicDiagramProps> = ({
   const {
     linkingState,
     selectedSource,
-    isLoading,
     selectSource,
     selectTarget,
     resetLinking,
@@ -44,6 +43,24 @@ export const D3EpicDiagram: React.FC<D3EpicDiagramProps> = ({
   const selectedTicket = selectedSource
     ? tickets.find((t) => t.key === selectedSource)
     : null;
+
+  // Handler to delete all connections for a ticket
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const handleDeleteAllConnections = async (ticketKey: string) => {
+    setConfirmDeleteKey(ticketKey);
+  };
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteKey) return;
+    setIsDeleting(true);
+    await axios.post("http://localhost:4000/api/delete-all-links", {
+      key: confirmDeleteKey,
+    });
+    setIsDeleting(false);
+    setConfirmDeleteKey(null);
+    if (onRefresh) onRefresh();
+  };
+  const handleCancelDelete = () => setConfirmDeleteKey(null);
 
   // Draw tickets
   const ticketElements: React.ReactNode[] = [];
@@ -116,6 +133,7 @@ export const D3EpicDiagram: React.FC<D3EpicDiagramProps> = ({
         linkState={linkState}
         onLinkClick={onLinkClick}
         isLinkLoading={isLinkLoading}
+        onDeleteAllConnections={() => handleDeleteAllConnections(ticket.key)}
       />
     );
   });
@@ -192,6 +210,13 @@ export const D3EpicDiagram: React.FC<D3EpicDiagramProps> = ({
     />
   );
 
+  // Call onRendered after layout and render
+  React.useEffect(() => {
+    if (onRendered) onRendered();
+    // Only call when tickets or layout changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tickets]);
+
   return (
     <div
       style={{
@@ -225,6 +250,88 @@ export const D3EpicDiagram: React.FC<D3EpicDiagramProps> = ({
           Choose a ticket to be blocked by {selectedTicket.key} -{" "}
           {selectedTicket.summary}
         </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmDeleteKey && (
+        <>
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              background: "rgba(0,0,0,0.32)",
+              zIndex: 2001,
+              pointerEvents: "auto",
+            }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "#fff",
+              border: "2px solid #e53935",
+              borderRadius: 16,
+              padding: 32,
+              boxShadow: "0 8px 32px rgba(229,57,53,0.18)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              zIndex: 2002,
+              minWidth: 320,
+              maxWidth: "90vw",
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 700,
+                color: "#e53935",
+                fontSize: 20,
+                marginBottom: 18,
+              }}
+            >
+              Remove all connections from {confirmDeleteKey}?
+            </div>
+            <div style={{ display: "flex", gap: 20 }}>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                style={{
+                  background: "#e53935",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "10px 28px",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  cursor: isDeleting ? "wait" : "pointer",
+                }}
+              >
+                {isDeleting ? "Removing..." : "Yes, Remove"}
+              </button>
+              <button
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                style={{
+                  background: "#fff",
+                  color: "#333",
+                  border: "1.5px solid #bbb",
+                  borderRadius: 8,
+                  padding: "10px 28px",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  cursor: isDeleting ? "wait" : "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       <svg

@@ -7,7 +7,7 @@ interface FloatingScrollbarProps {
   thumbColor?: string;
 }
 
-const SCROLLBAR_HEIGHT = 28;
+const SCROLLBAR_HEIGHT = 20;
 
 const FloatingScrollbar: React.FC<FloatingScrollbarProps> = ({
   scrollContainer,
@@ -119,8 +119,6 @@ const FloatingScrollbar: React.FC<FloatingScrollbarProps> = ({
           width: "100vw",
           height,
           background: trackColor,
-          // Remove borderRadius
-          // borderRadius: height / 2,
           boxShadow: "0 2px 8px rgba(25, 118, 210, 0.08)",
           pointerEvents: "auto",
         }}
@@ -133,8 +131,6 @@ const FloatingScrollbar: React.FC<FloatingScrollbarProps> = ({
             width: thumbWidth,
             height,
             background: thumbColor,
-            // Remove borderRadius
-            // borderRadius: height / 2,
             cursor: "pointer",
             transition: dragging.current ? "none" : "background 0.2s",
             boxShadow: dragging.current

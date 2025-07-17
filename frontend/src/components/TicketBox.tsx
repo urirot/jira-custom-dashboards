@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Ticket } from "../types";
 
 interface TicketBoxProps {
@@ -25,6 +25,7 @@ interface TicketBoxProps {
   linkState?: "idle" | "selected" | "targetable";
   onLinkClick?: () => void;
   isLinkLoading?: boolean;
+  onDeleteAllConnections?: (ticketKey: string) => Promise<void>;
 }
 
 const TicketBox: React.FC<TicketBoxProps> = ({
@@ -45,6 +46,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   linkState = "idle",
   onLinkClick,
   isLinkLoading = false,
+  onDeleteAllConnections,
 }) => {
   const summary = ticket.summary || "";
   const summaryLines = wrapText(
@@ -71,11 +73,18 @@ const TicketBox: React.FC<TicketBoxProps> = ({
     iconBg = "#fff";
   }
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDeleteAllConnections) onDeleteAllConnections(ticket.key);
+  };
+
   // Icon position: bottom row, right side, inside the box
-  const iconSize = 28; // Made bigger
+  const iconSize = 25; // Made bigger
   const iconMargin = 8;
   const iconX = x + width - iconSize - iconMargin;
   const iconY = y + adjustedBoxHeight - iconSize - iconMargin;
+  // Delete icon to the left of the link icon
+  const deleteIconX = iconX - iconSize - 6;
 
   return (
     <g>
@@ -214,6 +223,33 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           </text>
         </g>
       )}
+      {/* Delete connection icon */}
+      <g style={{ cursor: "pointer" }} onClick={handleDeleteClick}>
+        <svg
+          x={deleteIconX}
+          y={iconY}
+          width={iconSize}
+          height={iconSize}
+          viewBox="0 0 24 24"
+          style={{ pointerEvents: "all" }}
+        >
+          <circle
+            cx={12}
+            cy={12}
+            r={14}
+            fill="#fff"
+            stroke="#eee"
+            strokeWidth={1.5}
+          />
+          {/* Trash/Unlink icon */}
+          <path
+            d="M7 7l10 10M17 7L7 17"
+            stroke="#e53935"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+          />
+        </svg>
+      </g>
       {/* Link icon in bottom right, inside the box */}
       <g
         style={{ cursor: isLinkLoading ? "wait" : "pointer" }}
