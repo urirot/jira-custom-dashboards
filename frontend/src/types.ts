@@ -10,6 +10,7 @@ export interface Ticket {
   isCurrentSprint?: boolean;
   storyPoints?: number;
   assignee?: string;
+  team?: string | { value: string; id: string; self: string };
 }
 
 export interface D3EpicDiagramProps {

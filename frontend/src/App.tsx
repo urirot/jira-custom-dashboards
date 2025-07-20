@@ -28,15 +28,14 @@ function App() {
   const [epic, setEpic] = useState<EpicData | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingEpics, setLoadingEpics] = useState(false);
+  const [teams, setTeams] = useState<FilterOption[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<FilterOption | null>(null);
 
   const diagramScrollRef = React.useRef<HTMLDivElement>(null);
   const isDragging = React.useRef(false);
   const dragStartX = React.useRef(0);
   const scrollStartX = React.useRef(0);
   const [diagramRendered, setDiagramRendered] = useState(0);
-
-  // Track previous values to avoid unnecessary resets
-  const prevProjectRef = React.useRef<string | null>(null);
 
   const onMouseMove = (e: MouseEvent) => {
     if (isDragging.current && diagramScrollRef.current) {
@@ -74,6 +73,8 @@ function App() {
       setEpics([]);
       setSelectedEpic(null);
       setEpic(null);
+      setTeams([]);
+      setSelectedTeam(null);
       return;
     }
     setLoadingEpics(true);
@@ -88,6 +89,8 @@ function App() {
       .finally(() => setLoadingEpics(false));
     setSelectedEpic(null);
     setEpic(null);
+    setTeams([]);
+    setSelectedTeam(null);
   }, [selectedProject]);
 
   const refreshEpic = useCallback(() => {
@@ -110,6 +113,46 @@ function App() {
     if (!selectedEpic || !selectedProject) return;
     refreshEpic();
   }, [selectedEpic, selectedProject, refreshEpic]);
+
+  // Extract teams from epic tickets when epic data changes
+  useEffect(() => {
+    if (epic && epic.tickets) {
+      const uniqueTeams = Array.from(
+        new Set(
+          epic.tickets
+            .map((ticket) => {
+              // Handle team as object with value property
+              if (
+                ticket.team &&
+                typeof ticket.team === "object" &&
+                "value" in ticket.team
+              ) {
+                return ticket.team.value;
+              }
+              // Handle team as string
+              if (typeof ticket.team === "string") {
+                return ticket.team;
+              }
+              return null;
+            })
+            .filter(
+              (team): team is string => team !== null && team.trim() !== ""
+            )
+        )
+      ).sort();
+
+      const teamOptions = uniqueTeams.map((team) => ({
+        key: team,
+        name: team,
+      }));
+
+      setTeams(teamOptions);
+      setSelectedTeam(null); // Reset team selection when epic changes
+    } else {
+      setTeams([]);
+      setSelectedTeam(null);
+    }
+  }, [epic]);
 
   // Restore selectedProject from URL
   useEffect(() => {
@@ -136,6 +179,8 @@ function App() {
     setSelectedProject(project);
     setSelectedEpic(null);
     setEpic(null);
+    setTeams([]);
+    setSelectedTeam(null);
     // Update URL
     const params = new URLSearchParams(window.location.search);
     if (project) {
@@ -144,6 +189,7 @@ function App() {
       params.delete("project");
     }
     params.delete("epic");
+    params.delete("team");
     window.history.replaceState(
       {},
       "",
@@ -158,6 +204,8 @@ function App() {
       : null;
     setSelectedEpic(epicObj || null);
     setEpic(null);
+    setTeams([]);
+    setSelectedTeam(null);
     // Update URL
     const params = new URLSearchParams(window.location.search);
     if (epicObj) {
@@ -168,12 +216,62 @@ function App() {
     if (selectedProject) {
       params.set("project", selectedProject.key);
     }
+    params.delete("team");
     window.history.replaceState(
       {},
       "",
       `${window.location.pathname}?${params.toString()}`
     );
   };
+
+  // Handler for team change
+  const handleTeamChange = (team: FilterOption | null) => {
+    setSelectedTeam(team);
+    // Update URL
+    const params = new URLSearchParams(window.location.search);
+    if (team) {
+      params.set("team", team.key);
+    } else {
+      params.delete("team");
+    }
+    if (selectedProject) {
+      params.set("project", selectedProject.key);
+    }
+    if (selectedEpic) {
+      params.set("epic", selectedEpic.key);
+    }
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}?${params.toString()}`
+    );
+  };
+
+  // Filter tickets based on selected team
+  const filteredEpic = React.useMemo(() => {
+    if (!epic) return null;
+
+    if (!selectedTeam) return epic;
+
+    return {
+      ...epic,
+      tickets: epic.tickets.filter((ticket) => {
+        // Handle team as object with value property
+        if (
+          ticket.team &&
+          typeof ticket.team === "object" &&
+          "value" in ticket.team
+        ) {
+          return ticket.team.value === selectedTeam.key;
+        }
+        // Handle team as string
+        if (typeof ticket.team === "string") {
+          return ticket.team === selectedTeam.key;
+        }
+        return false;
+      }),
+    };
+  }, [epic, selectedTeam]);
 
   return (
     <div className="App">
@@ -190,9 +288,13 @@ function App() {
         loadingEpics={loadingEpics}
         onEpicChange={handleEpicChange}
         epicDisabled={!selectedProject}
+        teams={teams}
+        selectedTeam={selectedTeam}
+        onTeamChange={handleTeamChange}
+        teamDisabled={!selectedEpic || !epic}
       />
       <Diagram
-        epic={epic}
+        epic={filteredEpic}
         loading={loading}
         refreshEpic={refreshEpic}
         diagramRendered={diagramRendered}

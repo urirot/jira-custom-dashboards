@@ -10,36 +10,70 @@ router.get('/:id', async (req, res) => {
     return res.status(500).json({ error: 'Jira credentials not set in .env' });
   }
   try {
-    // JQL for all issues in the Epic, no team filter
-    const jql = encodeURIComponent(`project = "${project}" AND status in ("To Do", "Ready For Sprint", "In Progress", QA, Completed, Accepted, Approved, Released) AND \"Epic Link\" = ${epicKey} ORDER BY Rank ASC`);
-    const url = `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${jql}&fields=summary,issuetype,status,issuelinks,assignee,customfield_10014,customfield_10465`;
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64')}`,
-        'Accept': 'application/json',
-      },
-    });
-    if (!response.ok) {
-      return res.status(500).json({ error: 'Failed to fetch issues for Epic from Jira' });
+    // JQL for all issues in the Epic, no team filter - include ALL statuses
+    const jql = encodeURIComponent(`project = "${project}" AND \"Epic Link\" = ${epicKey} ORDER BY Rank ASC`);
+    
+    // Fetch all issues with pagination
+    let allIssues = [];
+    let startAt = 0;
+    const maxResults = 100;
+    
+    while (true) {
+      const url = `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${jql}&fields=summary,issuetype,status,issuelinks,assignee,customfield_10014,customfield_10465&startAt=${startAt}&maxResults=${maxResults}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64')}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        return res.status(500).json({ error: 'Failed to fetch issues for Epic from Jira' });
+      }
+      const data = await response.json();
+      
+      allIssues = allIssues.concat(data.issues || []);
+      
+      // Check if we've fetched all results
+      if (data.issues.length < maxResults) {
+        break;
+      }
+      startAt += maxResults;
     }
-    const data = await response.json();
 
     // JQL for all issues in open sprints (customized, no team filter)
     const openSprintJql = encodeURIComponent(`project = "${project}" AND status not in (Product, UX) AND Sprint in openSprints() ORDER BY cf[10005] DESC, assignee ASC`);
-    const openSprintUrl = `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${openSprintJql}&fields=key`;
-    const openSprintResp = await fetch(openSprintUrl, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64')}`,
-        'Accept': 'application/json',
-      },
-    });
-    let openSprintKeys = [];
-    if (openSprintResp.ok) {
-      const openSprintData = await openSprintResp.json();
-      openSprintKeys = (openSprintData.issues || []).map(issue => issue.key);
+    
+    // Fetch all open sprint issues with pagination
+    let allOpenSprintIssues = [];
+    let openSprintStartAt = 0;
+    const openSprintMaxResults = 100;
+    
+    while (true) {
+      const openSprintUrl = `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${openSprintJql}&fields=key&startAt=${openSprintStartAt}&maxResults=${openSprintMaxResults}`;
+      const openSprintResp = await fetch(openSprintUrl, {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64')}`,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (openSprintResp.ok) {
+        const openSprintData = await openSprintResp.json();
+        allOpenSprintIssues = allOpenSprintIssues.concat(openSprintData.issues || []);
+        
+        // Check if we've fetched all results
+        if (openSprintData.issues.length < openSprintMaxResults) {
+          break;
+        }
+        openSprintStartAt += openSprintMaxResults;
+      } else {
+        break;
+      }
     }
+    
+    const openSprintKeys = allOpenSprintIssues.map(issue => issue.key);
 
-    const tickets = (data.issues || []).map(issue => {
+    const tickets = allIssues.map(issue => {
       return {
         key: issue.key,
         summary: issue.fields.summary,

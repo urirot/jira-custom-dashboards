@@ -18,6 +18,11 @@ interface FiltersProps {
   loadingEpics: boolean;
   onEpicChange: (epic: FilterOption | null) => void;
   epicDisabled?: boolean;
+
+  teams: FilterOption[];
+  selectedTeam: FilterOption | null;
+  onTeamChange: (team: FilterOption | null) => void;
+  teamDisabled?: boolean;
 }
 
 const Filters: React.FC<FiltersProps> = ({
@@ -30,6 +35,10 @@ const Filters: React.FC<FiltersProps> = ({
   loadingEpics,
   onEpicChange,
   epicDisabled,
+  teams,
+  selectedTeam,
+  onTeamChange,
+  teamDisabled,
 }) => {
   return (
     <div
@@ -39,6 +48,7 @@ const Filters: React.FC<FiltersProps> = ({
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 24,
+        flexWrap: "wrap",
       }}
     >
       {/* Project Dropdown */}
@@ -178,6 +188,63 @@ const Filters: React.FC<FiltersProps> = ({
             isDisabled={epicDisabled}
           />
         )}
+      </div>
+      {/* Team Dropdown */}
+      <div style={{ minWidth: 160, width: 200 }}>
+        <Select
+          inputId="team-select"
+          options={teams.map((team) => ({
+            value: team.key,
+            label: team.name,
+            team,
+          }))}
+          value={
+            selectedTeam
+              ? {
+                  value: selectedTeam.key,
+                  label: selectedTeam.name,
+                  team: selectedTeam,
+                }
+              : null
+          }
+          onChange={(option: SingleValue<any>) => {
+            onTeamChange(option?.team || null);
+          }}
+          isClearable
+          placeholder="Filter by team..."
+          menuPortalTarget={document.body}
+          menuPosition="fixed"
+          styles={
+            {
+              control: (base: React.CSSProperties) => ({
+                ...base,
+                padding: 2,
+                borderRadius: 8,
+                borderColor: "#b3d8f7",
+                background: "#f8fafd",
+                fontSize: 15,
+                fontWeight: 500,
+                color: "#1a6b8f",
+                boxShadow: "0 1px 4px rgba(26, 107, 143, 0.07)",
+                minHeight: 44,
+                cursor: teamDisabled ? "not-allowed" : "pointer",
+                opacity: teamDisabled ? 0.5 : 1,
+              }),
+              menu: (base: React.CSSProperties) => ({
+                ...base,
+                zIndex: 9999,
+              }),
+              menuPortal: (base: React.CSSProperties) => ({
+                ...base,
+                zIndex: 9999,
+              }),
+            } as StylesConfig<any, false>
+          }
+          filterOption={(option, input) =>
+            option.label.toLowerCase().includes(input.toLowerCase())
+          }
+          isDisabled={teamDisabled}
+        />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Ticket } from "../types";
 
 interface TicketBoxProps {
@@ -65,12 +65,10 @@ const TicketBox: React.FC<TicketBoxProps> = ({
 
   // Icon color logic
   let iconColor = "#aaa";
-  let iconBg = undefined;
   if (linkState === "selected") iconColor = "#e53935";
   else if (linkState === "targetable") iconColor = "#2196f3";
   else if (linkState === "idle") {
     iconColor = "#111";
-    iconBg = "#fff";
   }
 
   const handleDeleteClick = (e: React.MouseEvent) => {
