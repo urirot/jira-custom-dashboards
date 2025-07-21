@@ -71,17 +71,27 @@ export const D3EpicDiagram: React.FC<
     let fillColor = "#fff";
     let textColor = getTextColor(ticket);
 
-    // Done statuses (Released, Accepted, Approved) should be green for all ticket types
-    if (["Released", "Accepted", "Approved"].includes(ticket.status)) {
+    // Released should be original green with white text
+    if (ticket.status === "Released") {
       fillColor = "#4caf50";
       textColor = "#fff";
     }
-    // Stories should have black background with white text (when not done)
+    // Accepted, Approved, Completed should be light green with dark text
+    else if (["Accepted", "Approved", "Completed"].includes(ticket.status)) {
+      fillColor = "#b6e8c9";
+      textColor = "#222";
+    }
+    // In Progress and QA tickets should be light gray
+    else if (["In Progress", "QA"].includes(ticket.status)) {
+      fillColor = "#e0e0e0";
+      textColor = "#333";
+    }
+    // Stories should have black background with white text (when not done, not in progress, not QA, not completed)
     else if (ticket.type === "Story") {
       fillColor = "#222";
       textColor = "#fff";
     }
-    // Tasks and other types: white background (when not done)
+    // Tasks and other types: white background (when not done, not in progress, not QA, not completed)
     else {
       fillColor = "#fff";
       textColor = getTextColor(ticket);

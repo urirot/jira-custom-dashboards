@@ -147,12 +147,15 @@ function App() {
       }));
 
       setTeams(teamOptions);
-      setSelectedTeam(null); // Reset team selection when epic changes
+      // Only reset team selection if no team is currently selected (not restoring from URL)
+      if (!selectedTeam) {
+        setSelectedTeam(null);
+      }
     } else {
       setTeams([]);
       setSelectedTeam(null);
     }
-  }, [epic]);
+  }, [epic, selectedTeam]);
 
   // Restore selectedProject from URL
   useEffect(() => {
@@ -173,6 +176,16 @@ function App() {
       if (epic) setSelectedEpic(epic);
     }
   }, [epics, selectedEpic]);
+
+  // Restore selectedTeam from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const teamKey = params.get("team");
+    if (teamKey && teams.length > 0 && !selectedTeam) {
+      const team = teams.find((t) => t.key === teamKey);
+      if (team) setSelectedTeam(team);
+    }
+  }, [teams, selectedTeam]);
 
   // Handler for project change
   const handleProjectChange = (project: FilterOption | null) => {
