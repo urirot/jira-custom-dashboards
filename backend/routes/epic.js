@@ -10,8 +10,7 @@ router.get('/:id', async (req, res) => {
     return res.status(500).json({ error: 'Jira credentials not set in .env' });
   }
   try {
-    // JQL for all issues in the Epic, no team filter - include ALL statuses
-    const jql = encodeURIComponent(`project = "${project}" AND \"Epic Link\" = ${epicKey} ORDER BY Rank ASC`);
+    const jql = encodeURIComponent(`project = "${project}" AND \"Epic Link\" = ${epicKey} AND status != "Archived" ORDER BY Rank ASC`);
     
     // Fetch all issues with pagination
     let allIssues = [];
