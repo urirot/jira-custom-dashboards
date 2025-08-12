@@ -1,7 +1,8 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { D3EpicDiagram } from "./D3EpicDiagram";
 import Loader from "./components/Loader";
 import FloatingScrollbar from "./components/FloatingScrollbar";
+import SummaryDialog from "./components/SummaryDialog";
 import { Ticket } from "./types";
 
 interface EpicData {
@@ -32,6 +33,11 @@ const Diagram: React.FC<DiagramProps> = ({
   const dragStartX = useRef(0);
   const scrollStartX = useRef(0);
 
+  // Summary dialog state
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
+
   // Mouse event handlers for drag-to-scroll
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (diagramScrollRef.current) {
@@ -61,25 +67,88 @@ const Diagram: React.FC<DiagramProps> = ({
     };
   }, []);
 
+  // Handle summary button click
+  const handleSummaryClick = () => {
+    setIsSummaryOpen(true);
+    setSummaryLoading(true);
+    setSummaryData(null);
+
+    // For now, we'll use the local calculation from the SummaryDialog component
+    // In the future, this could call the backend API
+    setTimeout(() => {
+      setSummaryLoading(false);
+    }, 500);
+  };
+
   return (
     <>
       {loading && <Loader />}
       {epic && (
         <>
-          <h2 style={{ textAlign: "center" }}>
-            <a
-              href={`https://taranis.atlassian.net/browse/${epic.epicId}`}
-              target="_blank"
-              rel="noopener noreferrer"
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: 16,
+              gap: 24,
+            }}
+          >
+            <h2 style={{ margin: 0 }}>
+              <a
+                href={`https://taranis.atlassian.net/browse/${epic.epicId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "#1976d2",
+                  textDecoration: "underline",
+                  fontWeight: 600,
+                }}
+              >
+                {`${epic.epicName} (${epic.epicId})`}
+              </a>
+            </h2>
+            <button
+              onClick={handleSummaryClick}
               style={{
-                color: "#1976d2",
-                textDecoration: "underline",
-                fontWeight: 600,
+                background: "#007bff",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "12px 24px",
+                fontSize: 16,
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                boxShadow: "0 2px 4px rgba(0,123,255,0.2)",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#0056b3";
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow =
+                  "0 4px 8px rgba(0,123,255,0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#007bff";
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow =
+                  "0 2px 4px rgba(0,123,255,0.2)";
               }}
             >
-              {`${epic.epicName} (${epic.epicId})`}
-            </a>
-          </h2>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+              </svg>
+              Summary
+            </button>
+          </div>
           {/* Spacer to prevent content from being hidden under sticky bottom scroll */}
           <div style={{ height: 40 }} />
           <div
@@ -174,6 +243,15 @@ const Diagram: React.FC<DiagramProps> = ({
           )}
         </>
       )}
+
+      {/* Summary Dialog */}
+      <SummaryDialog
+        isOpen={isSummaryOpen}
+        onClose={() => setIsSummaryOpen(false)}
+        epic={epic}
+        summary={summaryData}
+        loading={summaryLoading}
+      />
     </>
   );
 };

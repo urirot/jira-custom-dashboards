@@ -13,6 +13,7 @@ app.use('/api/epic', require('./routes/epic'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/link-issue', require('./routes/linkIssue'));
 app.use('/api/delete-all-links', require('./routes/deleteAllLinks'));
+app.use('/api/epic-summary', require('./routes/epicSummary'));
 
 app.listen(PORT, () => {
   console.log(`Backend listening on port ${PORT}`);
