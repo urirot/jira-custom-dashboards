@@ -18,7 +18,7 @@ A visual tool to explore and filter Jira epics and their tickets, showing depend
 1. **Clone the repository:**
    ```sh
    git clone <your-repo-url>
-   cd jira-feature-flowchart
+   cd jira-custom-dashboards
    ```
 
 2. **Set up environment variables:**
