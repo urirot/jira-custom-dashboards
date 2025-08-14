@@ -77,7 +77,7 @@ export function calculateEstimationPerformance(tickets: Ticket[]): EstimationPer
   // For now, we'll use mock data since we don't have access to Jira history
   // In a real implementation, this would query Jira API for ticket history
   const completedTickets = tickets.filter(t => 
-    ['Accepted', 'Approved', 'Completed', 'Released'].includes(t.status) &&
+    ['Accepted', 'Approved', 'Completed', 'Released', 'Done', 'Closed', 'Resolved'].includes(t.status) &&
     (t.storyPoints || 0) > 0.1 // Filter out tickets with 0.1 or less story points
   );
 

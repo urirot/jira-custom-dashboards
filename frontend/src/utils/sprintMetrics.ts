@@ -1,22 +1,55 @@
 import { Ticket, SprintMetrics } from '../types';
 
 export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
-  // Filter out tickets without story points for meaningful analysis
-  const validTickets = tickets.filter(t => (t.storyPoints || 0) > 0);
+  // Helper function to check if a ticket is completed
+  const isCompleted = (status: string): boolean => {
+    const completedStatuses = [
+      'Done', 'Closed', 'Resolved', 'Accepted', 'Complete', 'Finished', 
+      'Verified', 'Deployed', 'Released', 'Live', 'Production Ready', 'Approved'
+    ];
+    return completedStatuses.some(completedStatus => 
+      status.toLowerCase().includes(completedStatus.toLowerCase())
+    );
+  };
+
+  // Helper function to check if a ticket is in progress
+  const isInProgress = (status: string): boolean => {
+    const inProgressStatuses = [
+      'In Progress', 'QA', 'Review', 'Testing', 'Code Review', 
+      'In Development', 'Development', 'QA Testing', 'Peer Review'
+    ];
+    return inProgressStatuses.some(progressStatus => 
+      status.toLowerCase().includes(progressStatus.toLowerCase())
+    );
+  };
+
+  // Filter out tickets without story points or with 0.1 story points for meaningful analysis
+  const validTickets = tickets.filter(t => (t.storyPoints || 0) > 0.1);
+  
+  // Debug: Log all unique statuses to help identify what statuses are actually being used
+  const uniqueStatuses = Array.from(new Set(tickets.map(t => t.status)));
+  console.log('Available statuses in tickets:', uniqueStatuses);
   
   // Top Stats
   const totalTickets = validTickets.length;
-  const completedTickets = validTickets.filter(t => 
-    ['Done', 'Closed', 'Resolved', 'Accepted'].includes(t.status)
-  ).length;
-  const inProgressTickets = validTickets.filter(t => 
-    ['In Progress', 'QA', 'Review'].includes(t.status)
-  ).length;
+  const completedTickets = validTickets.filter(t => isCompleted(t.status)).length;
+  const inProgressTickets = validTickets.filter(t => isInProgress(t.status)).length;
   
   const totalStoryPoints = Math.round(validTickets.reduce((sum, t) => sum + (t.storyPoints || 0), 0) * 10) / 10;
   const completedStoryPoints = Math.round(validTickets
-    .filter(t => ['Done', 'Closed', 'Resolved', 'Accepted'].includes(t.status))
+    .filter(t => isCompleted(t.status))
     .reduce((sum, t) => sum + (t.storyPoints || 0), 0) * 10) / 10;
+  
+  // Debug: Log calculation details
+  console.log('Sprint Metrics Calculation:', {
+    totalTickets: tickets.length,
+    validTickets: validTickets.length,
+    ticketsWithLowStoryPoints: tickets.filter(t => (t.storyPoints || 0) > 0 && (t.storyPoints || 0) <= 0.1).length,
+    completedTickets,
+    totalStoryPoints,
+    completedStoryPoints,
+    completionPercentage: totalStoryPoints > 0 ? Math.round((completedStoryPoints / totalStoryPoints) * 100) : 0
+  });
   
   const velocity = completedStoryPoints;
   const averageVelocity = totalStoryPoints > 0 ? Math.round((completedStoryPoints / totalTickets) * 100) / 100 : 0;
@@ -46,7 +79,7 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
     current.tickets++;
     current.storyPoints += ticket.storyPoints || 0;
     
-    if (['Done', 'Closed', 'Resolved', 'Accepted'].includes(ticket.status)) {
+    if (isCompleted(ticket.status)) {
       current.completedTickets++;
       current.completedStoryPoints += ticket.storyPoints || 0;
     }
@@ -132,22 +165,22 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
 
   // Estimation vs Actual Analysis
   // For real Jira data, we'll use story points as a proxy for time estimation
-  const estimationTickets = validTickets.filter(t => t.storyPoints && t.storyPoints > 0);
+  const estimationTickets = validTickets.filter(t => t.storyPoints && t.storyPoints > 0.1);
   const onTimeTickets = estimationTickets.filter(t => {
     const storyPoints = t.storyPoints || 0;
-    const actual = ['Done', 'Closed', 'Resolved', 'Accepted'].includes(t.status) ? 
+    const actual = isCompleted(t.status) ? 
       storyPoints : storyPoints * 0.5;
     return actual <= storyPoints;
   }).length;
   const overTimeTickets = estimationTickets.filter(t => {
     const storyPoints = t.storyPoints || 0;
-    const actual = ['Done', 'Closed', 'Resolved', 'Accepted'].includes(t.status) ? 
+    const actual = isCompleted(t.status) ? 
       storyPoints : storyPoints * 0.5;
     return actual > storyPoints * 1.2;
   }).length;
   const underTimeTickets = estimationTickets.filter(t => {
     const storyPoints = t.storyPoints || 0;
-    const actual = ['Done', 'Closed', 'Resolved', 'Accepted'].includes(t.status) ? 
+    const actual = isCompleted(t.status) ? 
       storyPoints : storyPoints * 0.5;
     return actual < storyPoints * 0.8;
   }).length;
@@ -157,7 +190,7 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
     // For real data, we'll use story points as estimated effort
     // and completion status as a proxy for actual effort
     const estimated = Math.round(storyPoints * 10) / 10;
-    const actual = Math.round((['Done', 'Closed', 'Resolved', 'Accepted'].includes(ticket.status) ? 
+    const actual = Math.round((isCompleted(ticket.status) ? 
       storyPoints : storyPoints * 0.5) * 10) / 10; // Assume 50% completion for in-progress tickets
     const accuracy = estimated > 0 ? Math.round((actual / estimated) * 100) : 100;
     const status: 'on-time' | 'over-time' | 'under-time' = 
@@ -178,7 +211,7 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
   const totalEstimatedHours = Math.round(estimationTickets.reduce((sum, t) => sum + (t.storyPoints || 0), 0) * 10) / 10;
   const totalActualHours = Math.round(estimationTickets.reduce((sum, t) => {
     const storyPoints = t.storyPoints || 0;
-    return sum + (['Done', 'Closed', 'Resolved', 'Accepted'].includes(t.status) ? 
+    return sum + (isCompleted(t.status) ? 
       storyPoints : storyPoints * 0.5);
   }, 0) * 10) / 10;
   const totalSpentHours = Math.round(validTickets.reduce((sum, t) => sum + (t.storyPoints || 0), 0) * 10) / 10;

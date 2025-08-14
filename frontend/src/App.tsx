@@ -65,7 +65,7 @@ function App() {
               fontWeight: "700",
             }}
           >
-            Jira Feature Flowchart
+            Jira Custom Dashboards
           </h1>
 
           <p

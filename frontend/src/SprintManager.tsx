@@ -1161,6 +1161,7 @@ function SprintManager({ onBack }: SprintManagerProps) {
                         "Resolved",
                         "Accepted",
                         "Released",
+                        "Approved",
                       ].includes(ticket.status);
                       return (
                         <tr
@@ -1218,6 +1219,7 @@ function SprintManager({ onBack }: SprintManagerProps) {
                                   "Resolved",
                                   "Accepted",
                                   "Released",
+                                  "Approved",
                                 ].includes(ticket.status)
                                   ? "#E8F5E8" // Light green background for completed
                                   : "#F5F5F5", // Light gray background for other statuses
@@ -1227,6 +1229,7 @@ function SprintManager({ onBack }: SprintManagerProps) {
                                   "Resolved",
                                   "Accepted",
                                   "Released",
+                                  "Approved",
                                 ].includes(ticket.status)
                                   ? "#2E7D32" // Dark green text for completed
                                   : "#666666", // Gray text for other statuses
