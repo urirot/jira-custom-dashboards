@@ -16,10 +16,10 @@ const FrameBox: React.FC<FrameBoxProps> = ({
   y,
   width,
   height,
-  rx = 18,
+  rx = 14,
   stroke = "#888",
-  strokeWidth = 2,
-  strokeDasharray = "6,6",
+  strokeWidth = 1.5,
+  strokeDasharray = "5,5",
 }) => (
   <rect
     x={x}

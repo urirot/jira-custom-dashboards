@@ -56,11 +56,11 @@ const TicketBox: React.FC<TicketBoxProps> = ({
     summaryPadding
   );
   const summaryHeight = summaryLines.length * summaryLineHeight;
-  const boxHeight = Math.max(minBoxHeight + 18, 70 + summaryHeight + 54); // Add extra height for three rows (summary, assignee, status)
+  const boxHeight = Math.max(minBoxHeight + 12, 60 + summaryHeight + 40); // Reduced height for smaller design
 
   // Adjust box height if story points are present to ensure badge is visible
   const adjustedBoxHeight = ticket.storyPoints
-    ? Math.max(boxHeight, 80)
+    ? Math.max(boxHeight, 70)
     : boxHeight;
 
   // Icon color logic
@@ -77,12 +77,12 @@ const TicketBox: React.FC<TicketBoxProps> = ({
   };
 
   // Icon position: bottom row, right side, inside the box
-  const iconSize = 25; // Made bigger
-  const iconMargin = 8;
+  const iconSize = 20; // Made smaller
+  const iconMargin = 6;
   const iconX = x + width - iconSize - iconMargin;
   const iconY = y + adjustedBoxHeight - iconSize - iconMargin;
   // Delete icon to the left of the link icon
-  const deleteIconX = iconX - iconSize - 6;
+  const deleteIconX = iconX - iconSize - 4;
 
   return (
     <g>
@@ -105,8 +105,8 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       >
         <text
           x={x + summaryPadding}
-          y={y + 30}
-          fontSize={18}
+          y={y + 24}
+          fontSize={16}
           fontWeight="bold"
           fill={textColor}
         >
@@ -118,7 +118,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         <text
           key={idx}
           x={x + summaryPadding}
-          y={y + 56 + idx * summaryLineHeight}
+          y={y + 44 + idx * summaryLineHeight}
           fontSize={summaryFontSize}
           fill={textColor}
         >
@@ -128,8 +128,8 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       {/* Assignee row */}
       <text
         x={x + summaryPadding}
-        y={y + 56 + summaryLines.length * summaryLineHeight + 18}
-        fontSize={16}
+        y={y + 44 + summaryLines.length * summaryLineHeight + 14}
+        fontSize={14}
         fill={textColor}
         fontWeight="bold"
       >
@@ -143,17 +143,17 @@ const TicketBox: React.FC<TicketBoxProps> = ({
           {/* Background rectangle for Active Sprint */}
           <rect
             x={x + summaryPadding - 4}
-            y={y + 56 + summaryLines.length * summaryLineHeight + 32 - 12}
-            width={120}
-            height={20}
-            rx={4}
+            y={y + 44 + summaryLines.length * summaryLineHeight + 28 - 10}
+            width={100}
+            height={16}
+            rx={3}
             fill="#2196f3"
             opacity={0.9}
           />
           <text
             x={x + summaryPadding}
-            y={y + 56 + summaryLines.length * summaryLineHeight + 36}
-            fontSize={16}
+            y={y + 44 + summaryLines.length * summaryLineHeight + 30}
+            fontSize={13}
             fontWeight="bold"
             fill="#fff"
           >
@@ -163,8 +163,8 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       ) : (
         <text
           x={x + summaryPadding}
-          y={y + 56 + summaryLines.length * summaryLineHeight + 36}
-          fontSize={16}
+          y={y + 44 + summaryLines.length * summaryLineHeight + 30}
+          fontSize={13}
           fontWeight="bold"
           fill={fillColor === "#222" ? "#fff" : isRoot ? "#fff" : "#444"}
         >
@@ -172,10 +172,10 @@ const TicketBox: React.FC<TicketBoxProps> = ({
             <tspan>
               <rect
                 x={x + summaryPadding - 4}
-                y={y + 56 + summaryLines.length * summaryLineHeight + 32 - 12}
-                width={120}
-                height={20}
-                rx={4}
+                y={y + 44 + summaryLines.length * summaryLineHeight + 28 - 10}
+                width={100}
+                height={16}
+                rx={3}
                 fill="#888"
                 opacity={0.9}
               />
@@ -189,8 +189,8 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       {/* Status row at the bottom */}
       <text
         x={x + summaryPadding}
-        y={y + adjustedBoxHeight - 18}
-        fontSize={13}
+        y={y + adjustedBoxHeight - 14}
+        fontSize={12}
         fill={textColor}
         fontWeight="bold"
       >
@@ -202,16 +202,16 @@ const TicketBox: React.FC<TicketBoxProps> = ({
         <g>
           {/* Background circle for story points */}
           <circle
-            cx={x + width - 20}
-            cy={y + 20}
-            r={12}
+            cx={x + width - 16}
+            cy={y + 16}
+            r={10}
             fill="#ff9800"
             opacity={0.9}
           />
           <text
-            x={x + width - 20}
-            y={y + 22}
-            fontSize={12}
+            x={x + width - 16}
+            y={y + 18}
+            fontSize={10}
             fontWeight="bold"
             fill="#fff"
             textAnchor="middle"

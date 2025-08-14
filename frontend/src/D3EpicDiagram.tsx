@@ -150,7 +150,7 @@ export const D3EpicDiagram: React.FC<
 
   // Draw frames using bounding boxes
   const frameElements: React.ReactNode[] = [];
-  const frameBuffer = 25;
+  const frameBuffer = 20;
   frameBoundingBoxes.forEach((box, idx) => {
     frameElements.push(
       <FrameBox
@@ -171,7 +171,7 @@ export const D3EpicDiagram: React.FC<
       const sourceX = positions[ticket.key].x + BOX_WIDTH / 2;
       const sourceY = positions[ticket.key].y; // Start at bottom of the source ticket
       const targetX = positions[blockedKey].x + BOX_WIDTH / 2;
-      const targetY = positions[blockedKey].y + ticketHeights[blockedKey] + 20; // End at top of the target ticket
+      const targetY = positions[blockedKey].y + ticketHeights[blockedKey] + 15; // End at top of the target ticket
       arrowElements.push(
         <Arrow
           key={`${ticket.key}->${blockedKey}`}
@@ -232,7 +232,7 @@ export const D3EpicDiagram: React.FC<
       style={{
         width: "100%",
         background: "#f8fafd",
-        padding: 48,
+        padding: 32,
         boxSizing: "border-box",
         position: "relative",
       }}

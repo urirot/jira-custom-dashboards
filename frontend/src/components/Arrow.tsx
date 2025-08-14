@@ -16,7 +16,7 @@ const Arrow: React.FC<ArrowProps> = ({
   x2,
   y2,
   stroke = "#333",
-  strokeWidth = 1.5,
+  strokeWidth = 1,
   markerEndId = "arrow",
 }) => (
   <line
