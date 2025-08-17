@@ -163,58 +163,16 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
     { sprint: 'Current', velocity: velocity, date: new Date().toISOString() }
   ];
 
-  // Estimation vs Actual Analysis
-  // For real Jira data, we'll use story points as a proxy for time estimation
-  const estimationTickets = validTickets.filter(t => t.storyPoints && t.storyPoints > 0.1);
-  const onTimeTickets = estimationTickets.filter(t => {
-    const storyPoints = t.storyPoints || 0;
-    const actual = isCompleted(t.status) ? 
-      storyPoints : storyPoints * 0.5;
-    return actual <= storyPoints;
-  }).length;
-  const overTimeTickets = estimationTickets.filter(t => {
-    const storyPoints = t.storyPoints || 0;
-    const actual = isCompleted(t.status) ? 
-      storyPoints : storyPoints * 0.5;
-    return actual > storyPoints * 1.2;
-  }).length;
-  const underTimeTickets = estimationTickets.filter(t => {
-    const storyPoints = t.storyPoints || 0;
-    const actual = isCompleted(t.status) ? 
-      storyPoints : storyPoints * 0.5;
-    return actual < storyPoints * 0.8;
-  }).length;
 
-  const ticketAccuracy = estimationTickets.map(ticket => {
-    const storyPoints = ticket.storyPoints || 0;
-    // For real data, we'll use story points as estimated effort
-    // and completion status as a proxy for actual effort
-    const estimated = Math.round(storyPoints * 10) / 10;
-    const actual = Math.round((isCompleted(ticket.status) ? 
-      storyPoints : storyPoints * 0.5) * 10) / 10; // Assume 50% completion for in-progress tickets
-    const accuracy = estimated > 0 ? Math.round((actual / estimated) * 100) : 100;
-    const status: 'on-time' | 'over-time' | 'under-time' = 
-      actual <= estimated ? 'on-time' :
-      actual > estimated * 1.2 ? 'over-time' : 'under-time';
-
-    return {
-      key: ticket.key,
-      summary: ticket.summary,
-      estimated,
-      actual,
-      accuracy,
-      status
-    };
-  }).sort((a, b) => b.accuracy - a.accuracy);
 
   // For real data, we'll use story points as a proxy for time
-  const totalEstimatedHours = Math.round(estimationTickets.reduce((sum, t) => sum + (t.storyPoints || 0), 0) * 10) / 10;
-  const totalActualHours = Math.round(estimationTickets.reduce((sum, t) => {
+  const totalEstimatedHours = Math.round(validTickets.reduce((sum: number, t: Ticket) => sum + (t.storyPoints || 0), 0) * 10) / 10;
+  const totalActualHours = Math.round(validTickets.reduce((sum: number, t: Ticket) => {
     const storyPoints = t.storyPoints || 0;
     return sum + (isCompleted(t.status) ? 
       storyPoints : storyPoints * 0.5);
   }, 0) * 10) / 10;
-  const totalSpentHours = Math.round(validTickets.reduce((sum, t) => sum + (t.storyPoints || 0), 0) * 10) / 10;
+  const totalSpentHours = Math.round(validTickets.reduce((sum: number, t: Ticket) => sum + (t.storyPoints || 0), 0) * 10) / 10;
 
   return {
     // Top Stats
@@ -245,14 +203,7 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
     // Velocity Analysis
     velocityHistory,
 
-    // Estimation vs Actual
-    estimationAccuracy: {
-      onTimePercentage: estimationTickets.length > 0 ? Math.round((onTimeTickets / estimationTickets.length) * 100) : 0,
-      overTimePercentage: estimationTickets.length > 0 ? Math.round((overTimeTickets / estimationTickets.length) * 100) : 0,
-      underTimePercentage: estimationTickets.length > 0 ? Math.round((underTimeTickets / estimationTickets.length) * 100) : 0,
-      averageAccuracy: estimationTickets.length > 0 ? Math.round(ticketAccuracy.reduce((sum, t) => sum + t.accuracy, 0) / estimationTickets.length) : 100,
-      ticketAccuracy
-    },
+
 
     // Time Analysis
     timeMetrics: {

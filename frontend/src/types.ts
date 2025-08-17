@@ -91,22 +91,6 @@ export interface SprintMetrics {
     date: string;
   }>;
   
-  // Estimation vs Actual
-  estimationAccuracy: {
-    onTimePercentage: number;
-    overTimePercentage: number;
-    underTimePercentage: number;
-    averageAccuracy: number;
-    ticketAccuracy: Array<{
-      key: string;
-      summary: string;
-      estimated: number;
-      actual: number;
-      accuracy: number;
-      status: 'on-time' | 'over-time' | 'under-time';
-    }>;
-  };
-  
   // Time Analysis
   timeMetrics: {
     totalEstimatedHours: number;

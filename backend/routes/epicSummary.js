@@ -13,14 +13,7 @@ router.get('/:epicKey', async (req, res) => {
       epicKey,
       epicName: `Epic ${epicKey}`,
       message: 'Metrics calculated on frontend from epic data',
-      estimationData: {
-        onTimePercentage: 0,
-        overTimePercentage: 0,
-        totalEstimatedDays: 0,
-        totalActualDays: 0,
-        efficiencyPercentage: 0,
-        ticketPerformance: []
-      }
+
     };
 
     res.json(summary);
