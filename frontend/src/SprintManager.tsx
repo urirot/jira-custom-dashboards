@@ -5,7 +5,7 @@ import { calculateSprintMetrics } from "./utils/sprintMetrics";
 import PieChart from "./components/PieChart";
 import VelocityChart from "./components/VelocityChart";
 import Filters, { FilterOption } from "./Filters";
-import { useFilterStore } from "./utils/sharedState";
+
 import Loader from "./components/Loader";
 
 interface SprintManagerProps {
@@ -26,15 +26,12 @@ function SprintManager({ onBack }: SprintManagerProps) {
   const [sprintId, setSprintId] = useState<string>("");
   const [loadingBoards, setLoadingBoards] = useState(false);
 
-  // Use shared filter state
-  const {
-    projects,
-    selectedProject,
-    loadingProjects,
-    setProjects,
-    setSelectedProject,
-    setLoadingProjects,
-  } = useFilterStore();
+  // Local state for projects
+  const [projects, setProjects] = useState<FilterOption[]>([]);
+  const [selectedProject, setSelectedProject] = useState<FilterOption | null>(
+    null
+  );
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   // Handler for project change
   const handleProjectChange = (project: FilterOption | null) => {
@@ -44,14 +41,17 @@ function SprintManager({ onBack }: SprintManagerProps) {
     setSelectedBoard(null);
     setSprintTickets([]);
     setMetrics(null);
-    // Update URL
-    const params = new URLSearchParams(window.location.search);
+    // Update URL (preserve mode and project parameters)
+    const params = new URLSearchParams();
     if (project) {
       params.set("project", project.key);
-    } else {
-      params.delete("project");
     }
     params.delete("board");
+    // Preserve mode parameter
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (mode) {
+      params.set("mode", mode);
+    }
     window.history.replaceState(
       {},
       "",
@@ -64,8 +64,8 @@ function SprintManager({ onBack }: SprintManagerProps) {
     setSelectedBoard(board);
     setSprintTickets([]);
     setMetrics(null);
-    // Update URL
-    const params = new URLSearchParams(window.location.search);
+    // Update URL (preserve mode and project parameters)
+    const params = new URLSearchParams();
     if (board) {
       params.set("board", board.key);
     } else {
@@ -74,6 +74,11 @@ function SprintManager({ onBack }: SprintManagerProps) {
     if (selectedProject) {
       params.set("project", selectedProject.key);
     }
+    // Preserve mode parameter
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (mode) {
+      params.set("mode", mode);
+    }
     window.history.replaceState(
       {},
       "",
@@ -81,29 +86,41 @@ function SprintManager({ onBack }: SprintManagerProps) {
     );
   };
 
-  // Fetch projects if not already loaded
+  // Always fetch projects fresh on component mount
   useEffect(() => {
-    if (projects.length === 0 && !loadingProjects) {
-      setLoadingProjects(true);
-      axios
-        .get(`http://localhost:4000/api/projects?t=${Date.now()}`, {
-          headers: {
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
-        })
-        .then((res) => {
-          if (res.status === 200 || res.status === 304) {
-            setProjects(res.data || []);
-          } else {
-            setProjects([]);
-          }
-        })
-        .catch(() => setProjects([]))
-        .finally(() => setLoadingProjects(false));
+    setLoadingProjects(true);
+    axios
+      .get(`http://localhost:4000/api/projects?t=${Date.now()}`, {
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      })
+      .then((res) => {
+        if (res.status === 200 || res.status === 304) {
+          setProjects(res.data || []);
+        } else {
+          setProjects([]);
+        }
+      })
+      .catch(() => setProjects([]))
+      .finally(() => setLoadingProjects(false));
+  }, []);
+
+  // Restore selectedProject from URL after projects are loaded
+  useEffect(() => {
+    if (projects.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const projectKey = params.get("project");
+      if (projectKey && !selectedProject) {
+        const project = projects.find((p) => p.key === projectKey);
+        if (project) {
+          setSelectedProject(project);
+        }
+      }
     }
-  }, [projects.length, loadingProjects, setProjects, setLoadingProjects]);
+  }, [projects, selectedProject]);
 
   // Reset state when project changes
   useEffect(() => {
@@ -270,18 +287,10 @@ function SprintManager({ onBack }: SprintManagerProps) {
     fetchCurrentSprintTickets();
   }, [fetchCurrentSprintTickets]);
 
-  // Restore state from URL on component mount
+  // Restore board from URL on component mount (projects are fetched fresh)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const projectKey = params.get("project");
     const boardKey = params.get("board");
-
-    if (projectKey && projects.length > 0) {
-      const project = projects.find((p) => p.key === projectKey);
-      if (project) {
-        setSelectedProject(project);
-      }
-    }
 
     if (boardKey && boards.length > 0) {
       const board = boards.find((b) => b.key === boardKey);
@@ -289,7 +298,7 @@ function SprintManager({ onBack }: SprintManagerProps) {
         setSelectedBoard(board);
       }
     }
-  }, [projects, boards, setSelectedProject]);
+  }, [boards]);
 
   // Loading state
   const isLoading = loadingProjects || loadingBoards || loadingSprintData;
@@ -784,8 +793,6 @@ function SprintManager({ onBack }: SprintManagerProps) {
               </div>
             </div>
           </div>
-
-
 
           {/* Unfinished Tasks Table */}
           <div

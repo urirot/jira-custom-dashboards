@@ -13,6 +13,7 @@ interface EpicData {
 
 interface DiagramProps {
   epic: EpicData | null;
+  selectedEpic: { key: string; name: string } | null;
   loading: boolean;
   refreshEpic: () => void;
   diagramRendered: number;
@@ -21,6 +22,7 @@ interface DiagramProps {
 
 const Diagram: React.FC<DiagramProps> = ({
   epic,
+  selectedEpic,
   loading,
   refreshEpic,
   diagramRendered,
@@ -105,7 +107,9 @@ const Diagram: React.FC<DiagramProps> = ({
                   fontWeight: 600,
                 }}
               >
-                {`${epic.epicName} (${epic.epicId})`}
+                {selectedEpic
+                  ? `${selectedEpic.name} (${epic.epicId})`
+                  : epic.epicName}
               </a>
             </h2>
             <button

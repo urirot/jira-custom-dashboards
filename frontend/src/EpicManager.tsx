@@ -29,18 +29,15 @@ function EpicManager({ onBack }: EpicManagerProps) {
   const [teams, setTeams] = useState<FilterOption[]>([]);
 
   // Use shared filter state
-  const {
-    projects,
-    selectedProject,
-    selectedEpic,
-    selectedTeam,
-    loadingProjects,
-    setProjects,
-    setSelectedProject,
-    setSelectedEpic,
-    setSelectedTeam,
-    setLoadingProjects,
-  } = useFilterStore();
+  const { selectedEpic, selectedTeam, setSelectedEpic, setSelectedTeam } =
+    useFilterStore();
+
+  // Local state for projects
+  const [projects, setProjects] = useState<FilterOption[]>([]);
+  const [selectedProject, setSelectedProject] = useState<FilterOption | null>(
+    null
+  );
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   const diagramScrollRef = React.useRef<HTMLDivElement>(null);
   const isDragging = React.useRef(false);
@@ -68,29 +65,41 @@ function EpicManager({ onBack }: EpicManagerProps) {
     };
   }, []);
 
-  // Fetch projects if not already loaded
+  // Always fetch projects fresh on component mount
   useEffect(() => {
-    if (projects.length === 0 && !loadingProjects) {
-      setLoadingProjects(true);
-      axios
-        .get(`http://localhost:4000/api/projects?t=${Date.now()}`, {
-          headers: {
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
-        })
-        .then((res) => {
-          if (res.status === 200 || res.status === 304) {
-            setProjects(res.data || []);
-          } else {
-            setProjects([]);
-          }
-        })
-        .catch(() => setProjects([]))
-        .finally(() => setLoadingProjects(false));
+    setLoadingProjects(true);
+    axios
+      .get(`http://localhost:4000/api/projects?t=${Date.now()}`, {
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      })
+      .then((res) => {
+        if (res.status === 200 || res.status === 304) {
+          setProjects(res.data || []);
+        } else {
+          setProjects([]);
+        }
+      })
+      .catch(() => setProjects([]))
+      .finally(() => setLoadingProjects(false));
+  }, []);
+
+  // Restore selectedProject from URL after projects are loaded
+  useEffect(() => {
+    if (projects.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const projectKey = params.get("project");
+      if (projectKey && !selectedProject) {
+        const project = projects.find((p) => p.key === projectKey);
+        if (project) {
+          setSelectedProject(project);
+        }
+      }
     }
-  }, [projects.length, loadingProjects, setProjects, setLoadingProjects]);
+  }, [projects, selectedProject]);
 
   // Fetch epics for selected project
   useEffect(() => {
@@ -200,16 +209,6 @@ function EpicManager({ onBack }: EpicManagerProps) {
     }
   }, [epic, setSelectedTeam]);
 
-  // Restore selectedProject from URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const projectKey = params.get("project");
-    if (projectKey && projects.length > 0 && !selectedProject) {
-      const project = projects.find((p) => p.key === projectKey);
-      if (project) setSelectedProject(project);
-    }
-  }, [projects, selectedProject, setSelectedProject]);
-
   // Restore selectedEpic from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -237,15 +236,18 @@ function EpicManager({ onBack }: EpicManagerProps) {
     setEpic(null);
     setTeams([]);
     setSelectedTeam(null);
-    // Update URL
-    const params = new URLSearchParams(window.location.search);
+    // Update URL (preserve mode and project parameters)
+    const params = new URLSearchParams();
     if (project) {
       params.set("project", project.key);
-    } else {
-      params.delete("project");
     }
     params.delete("epic");
     params.delete("team");
+    // Preserve mode parameter
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (mode) {
+      params.set("mode", mode);
+    }
     window.history.replaceState(
       {},
       "",
@@ -262,8 +264,8 @@ function EpicManager({ onBack }: EpicManagerProps) {
     setEpic(null);
     setTeams([]);
     setSelectedTeam(null);
-    // Update URL
-    const params = new URLSearchParams(window.location.search);
+    // Update URL (preserve mode and project parameters)
+    const params = new URLSearchParams();
     if (epicObj) {
       params.set("epic", epicObj.key);
     } else {
@@ -273,6 +275,11 @@ function EpicManager({ onBack }: EpicManagerProps) {
       params.set("project", selectedProject.key);
     }
     params.delete("team");
+    // Preserve mode parameter
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (mode) {
+      params.set("mode", mode);
+    }
     window.history.replaceState(
       {},
       "",
@@ -283,18 +290,23 @@ function EpicManager({ onBack }: EpicManagerProps) {
   // Handler for team change
   const handleTeamChange = (team: FilterOption | null) => {
     setSelectedTeam(team);
-    // Update URL
-    const params = new URLSearchParams(window.location.search);
+    // Update URL (preserve mode and project parameters)
+    const params = new URLSearchParams();
     if (team) {
       params.set("team", team.key);
     } else {
       params.delete("team");
     }
+    if (selectedEpic) {
+      params.set("epic", selectedEpic.key);
+    }
     if (selectedProject) {
       params.set("project", selectedProject.key);
     }
-    if (selectedEpic) {
-      params.set("epic", selectedEpic.key);
+    // Preserve mode parameter
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (mode) {
+      params.set("mode", mode);
     }
     window.history.replaceState(
       {},
@@ -437,6 +449,7 @@ function EpicManager({ onBack }: EpicManagerProps) {
       {!loadingEpics && !loading && (
         <Diagram
           epic={filteredEpic}
+          selectedEpic={selectedEpic}
           loading={loading}
           refreshEpic={refreshEpic}
           diagramRendered={diagramRendered}

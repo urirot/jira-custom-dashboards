@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 import EpicManager from "./EpicManager";
 import SprintManager from "./SprintManager";
@@ -8,10 +8,26 @@ type AppMode = "selection" | "epic" | "sprint";
 
 function App() {
   const [currentMode, setCurrentMode] = useState<AppMode>("selection");
+  const [isInitializing, setIsInitializing] = useState(true);
   const { clearFilters } = useFilterStore();
+
+  // Check URL parameters on component mount and restore mode
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get("mode") as AppMode;
+    if (mode && (mode === "epic" || mode === "sprint")) {
+      setCurrentMode(mode);
+    }
+    setIsInitializing(false);
+  }, []);
 
   const handleModeSelect = (mode: "epic" | "sprint") => {
     setCurrentMode(mode);
+
+    // Update URL with mode parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set("mode", mode);
+    window.history.replaceState({}, "", url.toString());
   };
 
   const handleBackToSelection = () => {
@@ -23,8 +39,68 @@ function App() {
     const url = new URL(window.location.href);
     const project = url.searchParams.get("project");
     url.search = project ? `project=${project}` : "";
+    // Also remove mode parameter
+    url.searchParams.delete("mode");
     window.history.replaceState({}, "", url.toString());
   };
+
+  // Show loading state while checking URL parameters
+  if (isInitializing) {
+    return (
+      <div className="App">
+        <div
+          style={{
+            minHeight: "100vh",
+            background: "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.98)",
+              borderRadius: "16px",
+              padding: "40px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
+              textAlign: "center",
+              maxWidth: "400px",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "3rem",
+                marginBottom: "16px",
+              }}
+            >
+              ⏳
+            </div>
+            <h2
+              style={{
+                margin: "0 0 16px 0",
+                color: "#333",
+                fontSize: "1.5rem",
+                fontWeight: "600",
+              }}
+            >
+              Loading...
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                color: "#666",
+                fontSize: "1rem",
+              }}
+            >
+              Restoring your previous session
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (currentMode === "epic") {
     return <EpicManager onBack={handleBackToSelection} />;
