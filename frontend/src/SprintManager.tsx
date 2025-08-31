@@ -885,6 +885,7 @@ function SprintManager({ onBack }: SprintManagerProps) {
                     <th
                       style={{
                         padding: "12px 8px",
+
                         textAlign: "left",
                         fontWeight: "600",
                         color: "#495057",
