@@ -885,6 +885,16 @@ function SprintManager({ onBack }: SprintManagerProps) {
                     <th
                       style={{
                         padding: "12px 8px",
+                        textAlign: "left",
+                        fontWeight: "600",
+                        color: "#495057",
+                      }}
+                    >
+                      Labels
+                    </th>
+                    <th
+                      style={{
+                        padding: "12px 8px",
                         textAlign: "center",
                         fontWeight: "600",
                         color: "#495057",
@@ -990,6 +1000,71 @@ function SprintManager({ onBack }: SprintManagerProps) {
                             }}
                           >
                             {ticket.type}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 8px",
+                              color: "#495057",
+                            }}
+                          >
+                            {(() => {
+                              const labels = ticket.labels || [];
+                              if (labels.length === 0) {
+                                return (
+                                  <span
+                                    style={{
+                                      padding: "4px 8px",
+                                      borderRadius: "12px",
+                                      fontSize: "12px",
+                                      fontWeight: "500",
+                                      backgroundColor: "#E3F2FD",
+                                      color: "#1976D2",
+                                    }}
+                                  >
+                                    Planned
+                                  </span>
+                                );
+                              }
+
+                              return labels.map((label, index) => {
+                                let backgroundColor = "#F5F5F5";
+                                let textColor = "#666666";
+
+                                if (label.toLowerCase().includes("claude")) {
+                                  backgroundColor = "#FFF3E0";
+                                  textColor = "#E65100";
+                                } else if (
+                                  label.toLowerCase().includes("extra")
+                                ) {
+                                  backgroundColor = "#FCE4EC";
+                                  textColor = "#C2185B";
+                                } else if (
+                                  label.toLowerCase().includes("unplanned")
+                                ) {
+                                  backgroundColor = "#F3E5F5";
+                                  textColor = "#7B1FA2";
+                                }
+
+                                return (
+                                  <span
+                                    key={index}
+                                    style={{
+                                      padding: "4px 8px",
+                                      borderRadius: "12px",
+                                      fontSize: "12px",
+                                      fontWeight: "500",
+                                      backgroundColor,
+                                      color: textColor,
+                                      marginRight: "4px",
+                                      display: "inline-block",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    {label}
+                                  </span>
+                                );
+                              });
+                            })()}
                           </td>
                           <td
                             style={{

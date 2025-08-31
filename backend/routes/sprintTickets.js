@@ -112,14 +112,14 @@ router.get('/', async (req, res) => {
       
       // Add sprint filter to the board filter
       if (activeSprintId) {
-        jql += ` AND sprint = ${activeSprintId}`;
+        jql += ` AND sprint IS NOT EMPTY AND sprint = ${activeSprintId}`;
       }
     } else {
       // Fallback to project filter if no board filter
       jql = `project = "${project}"`;
       
       if (activeSprintId) {
-        jql += ` AND sprint = ${activeSprintId}`;
+        jql += ` AND sprint IS NOT EMPTY AND sprint = ${activeSprintId}`;
       } else {
         // If no active sprint found for this board, return empty results
         console.log(`No active sprint found for board ${board}, returning empty results`);
