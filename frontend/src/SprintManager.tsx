@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Ticket, SprintMetrics } from "./types";
 import { calculateSprintMetrics } from "./utils/sprintMetrics";
+import { getJiraUrl } from "./utils/d3Utils";
 import PieChart from "./components/PieChart";
 import VelocityChart from "./components/VelocityChart";
 import Filters, { FilterOption } from "./Filters";
@@ -369,7 +370,7 @@ function SprintManager({ onBack }: SprintManagerProps) {
       />
 
       {/* Sprint Info */}
-      {sprintName && sprintStartDate && sprintEndDate && (
+      {(sprintName || sprintStartDate || sprintEndDate) && (
         <div
           style={{
             background: "#f8f9fa",
@@ -379,18 +380,26 @@ function SprintManager({ onBack }: SprintManagerProps) {
             border: "1px solid #e9ecef",
           }}
         >
-          <h3
-            style={{
-              margin: "0 0 8px 0",
-              fontSize: "18px",
-              fontWeight: "600",
-            }}
-          >
-            {sprintName}
-          </h3>
-          <p style={{ margin: 0, color: "#666", fontSize: "14px" }}>
-            Date Range: {sprintStartDate} to {sprintEndDate}
-          </p>
+          {sprintName && (
+            <h3
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: "18px",
+                fontWeight: "600",
+              }}
+            >
+              {sprintName}
+            </h3>
+          )}
+          {(sprintStartDate || sprintEndDate) && (
+            <p style={{ margin: 0, color: "#666", fontSize: "14px" }}>
+              {sprintStartDate && sprintEndDate
+                ? `Date Range: ${sprintStartDate} to ${sprintEndDate}`
+                : sprintStartDate
+                ? `Start Date: ${sprintStartDate}`
+                : `End Date: ${sprintEndDate}`}
+            </p>
+          )}
         </div>
       )}
 
@@ -479,35 +488,13 @@ function SprintManager({ onBack }: SprintManagerProps) {
                 style={{
                   fontSize: "24px",
                   fontWeight: "bold",
-                  color: "#4A90E2",
-                }}
-              >
-                {metrics.totalTickets}
-              </div>
-              <div style={{ fontSize: "14px", color: "#666" }}>
-                Total Tickets
-              </div>
-            </div>
-            <div
-              style={{
-                background: "white",
-                padding: "20px",
-                borderRadius: "8px",
-                border: "1px solid #e9ecef",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  color: "#7ED321",
+                  color: "#3A7AB8",
                 }}
               >
                 {metrics.totalStoryPoints}
               </div>
               <div style={{ fontSize: "14px", color: "#666" }}>
-                Story Points
+                Story Points Planned
               </div>
             </div>
             <div
@@ -523,13 +510,16 @@ function SprintManager({ onBack }: SprintManagerProps) {
                 style={{
                   fontSize: "24px",
                   fontWeight: "bold",
-                  color: "#F5A623",
+                  color: "#6BB42A",
                 }}
               >
-                {metrics.assigneeStats.length}
+                {metrics.completedStoryPoints}
               </div>
-              <div style={{ fontSize: "14px", color: "#666" }}>Assignees</div>
+              <div style={{ fontSize: "14px", color: "#666" }}>
+                Story Points Completed
+              </div>
             </div>
+
             <div
               style={{
                 background: "white",
@@ -550,14 +540,14 @@ function SprintManager({ onBack }: SprintManagerProps) {
                             metrics.totalStoryPoints) *
                             100
                         ) >= 80
-                        ? "#7ED321"
+                        ? "#6BB42A"
                         : Math.round(
                             (metrics.completedStoryPoints /
                               metrics.totalStoryPoints) *
                               100
                           ) >= 60
-                        ? "#F5A623"
-                        : "#D0021B"
+                        ? "#E09B2E"
+                        : "#B82A24"
                       : "#666",
                 }}
               >
@@ -572,6 +562,33 @@ function SprintManager({ onBack }: SprintManagerProps) {
               </div>
               <div style={{ fontSize: "14px", color: "#666" }}>
                 Planned vs Done
+              </div>
+            </div>
+            <div
+              style={{
+                background: "white",
+                padding: "20px",
+                borderRadius: "8px",
+                border: "1px solid #e9ecef",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  color: "#E09B2E",
+                }}
+              >
+                {(() => {
+                  const unplannedCategory = metrics.labelBreakdown.find(
+                    (cat) => cat.category.toLowerCase() === "unplanned"
+                  );
+                  return unplannedCategory ? unplannedCategory.storyPoints : 0;
+                })()}
+              </div>
+              <div style={{ fontSize: "14px", color: "#666" }}>
+                Unplanned Completed
               </div>
             </div>
           </div>
@@ -614,16 +631,16 @@ function SprintManager({ onBack }: SprintManagerProps) {
                     label: epic.epic,
                     value: epic.storyPoints,
                     color: [
-                      "#4A90E2", // Blue
-                      "#7ED321", // Green
-                      "#F5A623", // Orange
-                      "#D0021B", // Red
-                      "#9013FE", // Purple
-                      "#50E3C2", // Teal
-                      "#F8E71C", // Yellow
-                      "#BD10E0", // Magenta
-                      "#4A4A4A", // Dark Gray
-                      "#8B572A", // Brown
+                      "#3A7AB8", // Medium Blue
+                      "#6BB42A", // Medium Green
+                      "#E09B2E", // Medium Orange
+                      "#B82A24", // Medium Red
+                      "#7B1FBE", // Medium Purple
+                      "#4AB3A3", // Medium Teal
+                      "#E4C72C", // Medium Yellow
+                      "#A61ABA", // Medium Magenta
+                      "#3A3A3A", // Medium Gray
+                      "#6B4A2A", // Medium Brown
                     ][index % 10],
                   }))}
                 />
@@ -679,16 +696,16 @@ function SprintManager({ onBack }: SprintManagerProps) {
                     });
 
                     const uniqueColors = [
-                      "#4A90E2", // Blue
-                      "#7ED321", // Green
-                      "#F5A623", // Orange
-                      "#D0021B", // Red
-                      "#9013FE", // Purple
-                      "#50E3C2", // Teal
-                      "#F8E71C", // Yellow
-                      "#BD10E0", // Magenta
-                      "#4A4A4A", // Dark Gray
-                      "#8B572A", // Brown
+                      "#3A7AB8", // Medium Blue
+                      "#6BB42A", // Medium Green
+                      "#E09B2E", // Medium Orange
+                      "#B82A24", // Medium Red
+                      "#7B1FBE", // Medium Purple
+                      "#4AB3A3", // Medium Teal
+                      "#E4C72C", // Medium Yellow
+                      "#A61ABA", // Medium Magenta
+                      "#3A3A3A", // Medium Gray
+                      "#6B4A2A", // Medium Brown
                     ];
 
                     return Array.from(processedData.values()).map(
@@ -697,19 +714,19 @@ function SprintManager({ onBack }: SprintManagerProps) {
                         value: item.storyPoints,
                         color:
                           item.type.toLowerCase() === "bug"
-                            ? "#D0021B" // Red for bugs
+                            ? "#B82A24" // Medium Red for bugs
                             : item.type.toLowerCase() === "feature"
-                            ? "#7ED321" // Green for features
+                            ? "#6BB42A" // Medium Green for features
                             : item.type.toLowerCase() === "infra"
-                            ? "#4A90E2" // Blue for infra
+                            ? "#3A7AB8" // Medium Blue for infra
                             : [
-                                "#F5A623", // Orange
-                                "#9013FE", // Purple
-                                "#50E3C2", // Teal
-                                "#F8E71C", // Yellow
-                                "#BD10E0", // Magenta
-                                "#4A4A4A", // Dark Gray
-                                "#8B572A", // Brown
+                                "#E09B2E", // Medium Orange
+                                "#7B1FBE", // Medium Purple
+                                "#4AB3A3", // Medium Teal
+                                "#E4C72C", // Medium Yellow
+                                "#A61ABA", // Medium Magenta
+                                "#3A3A3A", // Medium Gray
+                                "#6B4A2A", // Medium Brown
                               ][index % 7],
                       })
                     );
@@ -757,17 +774,17 @@ function SprintManager({ onBack }: SprintManagerProps) {
                       value: label.storyPoints,
                       color:
                         label.category.toLowerCase() === "unplanned"
-                          ? "#D0021B" // Red for unplanned
+                          ? "#B82A24" // Medium Red for unplanned
                           : label.category.toLowerCase() === "planned"
-                          ? "#7ED321" // Green for planned
+                          ? "#6BB42A" // Medium Green for planned
                           : label.category.toLowerCase() === "claude"
-                          ? "#4A90E2" // Blue for claude
+                          ? "#3A7AB8" // Medium Blue for claude
                           : [
-                              "#4A90E2", // Blue
-                              "#7ED321", // Green
-                              "#F5A623", // Orange
-                              "#9013FE", // Purple
-                              "#50E3C2", // Teal
+                              "#3A7AB8", // Medium Blue
+                              "#6BB42A", // Medium Green
+                              "#E09B2E", // Medium Orange
+                              "#7B1FBE", // Medium Purple
+                              "#4AB3A3", // Medium Teal
                             ][index % 5],
                     }));
 
@@ -776,14 +793,14 @@ function SprintManager({ onBack }: SprintManagerProps) {
                       result.push({
                         label: extraCategory.category,
                         value: extraCategory.storyPoints,
-                        color: "#F8E71C", // Yellow for extra
+                        color: "#E4C72C", // Medium Yellow for extra
                       });
                     } else {
                       // If Extra doesn't exist, add it with 0 value
                       result.push({
                         label: "Extra",
                         value: 0,
-                        color: "#F8E71C", // Yellow for extra
+                        color: "#E4C72C", // Medium Yellow for extra
                       });
                     }
 
@@ -934,7 +951,25 @@ function SprintManager({ onBack }: SprintManagerProps) {
                             }}
                           >
                             <div style={{ fontWeight: "500" }}>
-                              {ticket.key}
+                              <a
+                                href={getJiraUrl(ticket.key)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  color: "#007bff",
+                                  textDecoration: "none",
+                                  cursor: "pointer",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.textDecoration =
+                                    "underline";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.textDecoration = "none";
+                                }}
+                              >
+                                {ticket.key}
+                              </a>
                             </div>
                             <div style={{ fontSize: "12px", color: "#6c757d" }}>
                               {ticket.summary}
@@ -1008,26 +1043,9 @@ function SprintManager({ onBack }: SprintManagerProps) {
                               color: "#495057",
                             }}
                           >
-                            {(() => {
-                              const labels = ticket.labels || [];
-                              if (labels.length === 0) {
-                                return (
-                                  <span
-                                    style={{
-                                      padding: "4px 8px",
-                                      borderRadius: "12px",
-                                      fontSize: "12px",
-                                      fontWeight: "500",
-                                      backgroundColor: "#E3F2FD",
-                                      color: "#1976D2",
-                                    }}
-                                  >
-                                    Planned
-                                  </span>
-                                );
-                              }
-
-                              return labels.map((label, index) => {
+                            {ticket.labels &&
+                              ticket.labels.length > 0 &&
+                              ticket.labels.map((label, index) => {
                                 let backgroundColor = "#F5F5F5";
                                 let textColor = "#666666";
 
@@ -1064,8 +1082,7 @@ function SprintManager({ onBack }: SprintManagerProps) {
                                     {label}
                                   </span>
                                 );
-                              });
-                            })()}
+                              })}
                           </td>
                           <td
                             style={{

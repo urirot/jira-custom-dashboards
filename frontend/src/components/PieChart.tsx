@@ -77,7 +77,14 @@ const PieChart: React.FC<PieChartProps> = ({
           />
         ))}
       </svg>
-      <div style={{ marginTop: "15px" }}>
+      <div
+        style={{
+          marginTop: "15px",
+          maxHeight: "150px",
+          overflowY: "auto",
+          paddingRight: "8px",
+        }}
+      >
         {data.map((item, index) => (
           <div
             key={index}
@@ -98,7 +105,20 @@ const PieChart: React.FC<PieChartProps> = ({
                   borderRadius: "2px",
                 }}
               />
-              <span style={{ color: "#333" }}>{item.label}</span>
+              <span
+                style={{
+                  color: "#333",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "120px",
+                }}
+                title={item.label}
+              >
+                {item.label.length > 30
+                  ? `${item.label.substring(0, 30)}...`
+                  : item.label}
+              </span>
             </div>
             <span style={{ color: "#666", fontWeight: "500" }}>
               {Math.round((item.value / total) * 100)}%
