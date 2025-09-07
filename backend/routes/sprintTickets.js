@@ -106,6 +106,7 @@ router.get('/', async (req, res) => {
     // Build JQL query - combine board filter with sprint filter
     let jql = '';
     
+    
     if (boardFilter) {
       // Use the board's filter as the base
       jql = boardFilter;
@@ -133,6 +134,7 @@ router.get('/', async (req, res) => {
       }
     }
     
+    
 
 
 
@@ -140,7 +142,7 @@ router.get('/', async (req, res) => {
 
 
     // Fetch tickets from Jira
-    const url = `https://${JIRA_DOMAIN}/rest/api/3/search`;
+    const url = `https://${JIRA_DOMAIN}/rest/api/3/search/jql`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {

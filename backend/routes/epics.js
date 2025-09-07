@@ -15,13 +15,20 @@ router.get('/', async (req, res) => {
     let allIssues = [];
     let total = 0;
     do {
-      const jql = encodeURIComponent(`project = "${project}" AND issuetype=Epic AND status NOT IN ("Archived", "Done") ORDER BY created DESC`);
-      const url = `https://${JIRA_DOMAIN}/rest/api/3/search?jql=${jql}&fields=summary,customfield_10465,customfield_10011,status&maxResults=${maxResults}&startAt=${startAt}`;
+      const jql = `project = "${project}" AND issuetype = Epic ORDER BY created DESC`;
+      const url = `https://${JIRA_DOMAIN}/rest/api/3/search/jql`;
       const response = await fetch(url, {
+        method: 'POST',
         headers: {
           'Authorization': `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString('base64')}`,
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          jql: jql,
+          fields: ['summary', 'status', 'customfield_10011', 'customfield_10465'],
+          maxResults: maxResults
+        })
       });
       if (!response.ok) {
         const errorText = await response.text();
@@ -41,7 +48,7 @@ router.get('/', async (req, res) => {
       key: issue.key,
       name: issue.fields.summary,
       epicName: issue.fields.customfield_10011 || null,
-      team: issue.fields.customfield_10465 || null,
+      team: issue.fields.customfield_10465?.value || null,
     }));
     res.json(epics);
   } catch (err) {
