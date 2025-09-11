@@ -101,7 +101,7 @@ const TicketBox: React.FC<TicketBoxProps> = ({
       <a
         href={getJiraUrl(ticket.key)}
         target="_blank"
-        style={{ cursor: "pointer" }}
+        style={{ cursor: "pointer" }} rel="noreferrer"
       >
         <text
           x={x + summaryPadding}

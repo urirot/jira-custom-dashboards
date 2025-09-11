@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import { D3EpicDiagram } from "./D3EpicDiagram";
 import Loader from "./components/Loader";
 import FloatingScrollbar from "./components/FloatingScrollbar";
@@ -49,16 +49,16 @@ const Diagram: React.FC<DiagramProps> = ({
       document.body.style.cursor = "grabbing";
     }
   };
-  const onMouseMove = (e: MouseEvent) => {
+  const onMouseMove = useCallback((e: MouseEvent) => {
     if (isDragging.current && diagramScrollRef.current) {
       const dx = e.clientX - dragStartX.current;
       diagramScrollRef.current.scrollLeft = scrollStartX.current - dx;
     }
-  };
-  const onMouseUp = () => {
+  }, []);
+  const onMouseUp = useCallback(() => {
     isDragging.current = false;
     document.body.style.cursor = "";
-  };
+  }, []);
 
   React.useEffect(() => {
     window.addEventListener("mousemove", onMouseMove);
@@ -67,7 +67,7 @@ const Diagram: React.FC<DiagramProps> = ({
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, []);
+  }, [onMouseMove, onMouseUp]);
 
   // Handle summary button click
   const handleSummaryClick = () => {

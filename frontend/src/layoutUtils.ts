@@ -122,15 +122,21 @@ export function computeDiagramLayout(tickets: Ticket[]): DiagramLayout {
       const y = yCursor;
       const totalRowWidth = row.length * (BOX_WIDTH + HORIZONTAL_GAP) - HORIZONTAL_GAP;
       const startX = 24 + Math.max(0, (totalRowWidth < 0 ? 0 : 0)); // No extra centering, just left padding
-      row.forEach((ticket, i) => {
+      // Process tickets and calculate bounding box in one pass
+      const rowPositions = row.map((ticket, i) => {
         const x = startX + i * (BOX_WIDTH + HORIZONTAL_GAP);
         positions[ticket.key] = { x, y };
         ticketHeights[ticket.key] = heights[i];
+        return { x, y, height: heights[i] };
+      });
+      
+      // Update bounding box using the calculated positions
+      for (const { x, y, height } of rowPositions) {
         if (x < minX) minX = x;
         if (y < minY) minY = y;
         if (x + BOX_WIDTH > maxX) maxX = x + BOX_WIDTH;
-        if (y + heights[i] > maxY) maxY = y + heights[i];
-      });
+        if (y + height > maxY) maxY = y + height;
+      }
       yCursor = y + maxRowHeight + VERTICAL_GAP;
     }
     frameBoundingBoxes.push({ minX, minY, maxX, maxY });
@@ -217,15 +223,21 @@ export function computeDiagramLayout(tickets: Ticket[]): DiagramLayout {
       const y = yCursor;
       const totalRowWidth = row.length * (BOX_WIDTH + HORIZONTAL_GAP) - HORIZONTAL_GAP;
       const startX = frameX + Math.max(24, (width - totalRowWidth) / 2);
-      row.forEach((ticket, i) => {
+      // Process tickets and calculate bounding box in one pass
+      const rowPositions = row.map((ticket, i) => {
         const x = startX + i * (BOX_WIDTH + HORIZONTAL_GAP);
         positions[ticket.key] = { x, y };
         ticketHeights[ticket.key] = heights[i];
+        return { x, y, height: heights[i] };
+      });
+      
+      // Update bounding box using the calculated positions
+      for (const { x, y, height } of rowPositions) {
         if (x < minX) minX = x;
         if (y < minY) minY = y;
         if (x + BOX_WIDTH > maxX) maxX = x + BOX_WIDTH;
-        if (y + heights[i] > maxY) maxY = y + heights[i];
-      });
+        if (y + height > maxY) maxY = y + height;
+      }
       yCursor = y + maxRowHeight + VERTICAL_GAP;
     }
   });

@@ -4,7 +4,6 @@ import { Ticket, SprintMetrics } from "./types";
 import { calculateSprintMetrics } from "./utils/sprintMetrics";
 import { getJiraUrl } from "./utils/d3Utils";
 import PieChart from "./components/PieChart";
-import VelocityChart from "./components/VelocityChart";
 import Filters, { FilterOption } from "./Filters";
 
 import Loader from "./components/Loader";
@@ -19,12 +18,15 @@ function SprintManager({ onBack }: SprintManagerProps) {
   const [boards, setBoards] = useState<FilterOption[]>([]);
   const [selectedBoard, setSelectedBoard] = useState<FilterOption | null>(null);
   const [metrics, setMetrics] = useState<SprintMetrics | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Ticket | "completed";
+    direction: "asc" | "desc";
+  } | null>(null);
 
   // Sprint date range state
   const [sprintStartDate, setSprintStartDate] = useState<string>("");
   const [sprintEndDate, setSprintEndDate] = useState<string>("");
   const [sprintName, setSprintName] = useState<string>("");
-  const [sprintId, setSprintId] = useState<string>("");
   const [loadingBoards, setLoadingBoards] = useState(false);
 
   // Local state for projects
@@ -36,7 +38,6 @@ function SprintManager({ onBack }: SprintManagerProps) {
 
   // Handler for project change
   const handleProjectChange = (project: FilterOption | null) => {
-    console.log("handleProjectChange called with:", project?.key);
     setSelectedProject(project);
     setBoards([]);
     setSelectedBoard(null);
@@ -133,7 +134,6 @@ function SprintManager({ onBack }: SprintManagerProps) {
       setSprintStartDate("");
       setSprintEndDate("");
       setSprintName("");
-      setSprintId("");
       return;
     }
 
@@ -145,19 +145,11 @@ function SprintManager({ onBack }: SprintManagerProps) {
 
   // Fetch boards when project changes
   useEffect(() => {
-    console.log(
-      "useEffect triggered for boards. selectedProject:",
-      selectedProject?.key
-    );
-
     if (!selectedProject) {
-      console.log("No project selected, clearing boards");
       setBoards([]);
       setSelectedBoard(null);
       return;
     }
-
-    console.log(`Fetching boards for project: ${selectedProject.key}`);
     setLoadingBoards(true);
 
     const fetchBoards = async () => {
@@ -165,8 +157,6 @@ function SprintManager({ onBack }: SprintManagerProps) {
         const url = new URL(`http://localhost:4000/api/boards`);
         url.searchParams.set("project", selectedProject.key);
         url.searchParams.set("t", Date.now().toString());
-
-        console.log(`Making request to: ${url.toString()}`);
 
         const response = await axios.get(url.toString(), {
           headers: {
@@ -176,29 +166,20 @@ function SprintManager({ onBack }: SprintManagerProps) {
           },
         });
 
-        console.log(
-          `Response received: ${response.status}, boards count: ${
-            response.data?.length || 0
-          }`
-        );
-
         if (response.status === 200 || response.status === 304) {
           const boardOptions = (response.data || []).map((board: any) => ({
             key: board.id.toString(),
             name: board.name,
           }));
           setBoards(boardOptions);
-          console.log(`Set ${boardOptions.length} boards`);
         } else {
           setBoards([]);
-          console.log("No boards set due to response status");
         }
       } catch (error) {
         console.error("Error fetching boards:", error);
         setBoards([]);
       } finally {
         setLoadingBoards(false);
-        console.log("Finished loading boards");
       }
     };
 
@@ -229,11 +210,10 @@ function SprintManager({ onBack }: SprintManagerProps) {
       );
 
       if (response.status === 200 || response.status === 304) {
-        const { startDate, endDate, sprintName, sprintId } = response.data;
+        const { startDate, endDate, sprintName } = response.data;
         setSprintStartDate(startDate);
         setSprintEndDate(endDate);
         setSprintName(sprintName || "Current Sprint");
-        setSprintId(sprintId || "");
       }
     } catch (error) {
       console.error("Error fetching sprint dates:", error);
@@ -300,6 +280,65 @@ function SprintManager({ onBack }: SprintManagerProps) {
       }
     }
   }, [boards]);
+
+  // Sorting functions
+  const handleSort = (key: keyof Ticket | "completed") => {
+    let direction: "asc" | "desc" = "asc";
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === "asc"
+    ) {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortedTickets = () => {
+    if (!sortConfig) {
+      return sprintTickets
+        .filter((ticket) => !ticket.status.toLowerCase().includes("archived"))
+        .sort((a, b) => (a.assignee || "").localeCompare(b.assignee || ""));
+    }
+
+    return sprintTickets
+      .filter((ticket) => !ticket.status.toLowerCase().includes("archived"))
+      .sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        if (sortConfig.key === "completed") {
+          const completedStatuses = [
+            "Done",
+            "Closed",
+            "Resolved",
+            "Accepted",
+            "Released",
+            "Approved",
+          ];
+          aValue = completedStatuses.includes(a.status) ? 1 : 0;
+          bValue = completedStatuses.includes(b.status) ? 1 : 0;
+        } else {
+          aValue = a[sortConfig.key as keyof Ticket] || "";
+          bValue = b[sortConfig.key as keyof Ticket] || "";
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === "asc" ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === "asc" ? 1 : -1;
+        }
+        return 0;
+      });
+  };
+
+  const getSortIcon = (key: keyof Ticket | "completed") => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return "↕";
+    }
+    return sortConfig.direction === "asc" ? "↑" : "↓";
+  };
 
   // Loading state
   const isLoading = loadingProjects || loadingBoards || loadingSprintData;
@@ -695,19 +734,6 @@ function SprintManager({ onBack }: SprintManagerProps) {
                       }
                     });
 
-                    const uniqueColors = [
-                      "#3A7AB8", // Medium Blue
-                      "#6BB42A", // Medium Green
-                      "#E09B2E", // Medium Orange
-                      "#B82A24", // Medium Red
-                      "#7B1FBE", // Medium Purple
-                      "#4AB3A3", // Medium Teal
-                      "#E4C72C", // Medium Yellow
-                      "#A61ABA", // Medium Magenta
-                      "#3A3A3A", // Medium Gray
-                      "#6B4A2A", // Medium Brown
-                    ];
-
                     return Array.from(processedData.values()).map(
                       (item, index) => ({
                         label: item.type,
@@ -834,7 +860,14 @@ function SprintManager({ onBack }: SprintManagerProps) {
             >
               All Tasks
             </h3>
-            <div style={{ overflowX: "auto", overflowY: "auto", flex: 1 }}>
+            <div
+              style={{
+                overflowX: "auto",
+                overflowY: "auto",
+                flex: 1,
+                maxHeight: "70vh",
+              }}
+            >
               <table
                 style={{
                   width: "100%",
@@ -842,7 +875,13 @@ function SprintManager({ onBack }: SprintManagerProps) {
                   fontSize: "14px",
                 }}
               >
-                <thead>
+                <thead
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 10,
+                  }}
+                >
                   <tr
                     style={{
                       borderBottom: "2px solid #e9ecef",
@@ -855,9 +894,20 @@ function SprintManager({ onBack }: SprintManagerProps) {
                         textAlign: "left",
                         fontWeight: "600",
                         color: "#495057",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        position: "relative",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onClick={() => handleSort("summary")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#e9ecef";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                     >
-                      Task Name
+                      Task Name {getSortIcon("summary")}
                     </th>
                     <th
                       style={{
@@ -865,9 +915,19 @@ function SprintManager({ onBack }: SprintManagerProps) {
                         textAlign: "left",
                         fontWeight: "600",
                         color: "#495057",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onClick={() => handleSort("assignee")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#e9ecef";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                     >
-                      Assignee
+                      Assignee {getSortIcon("assignee")}
                     </th>
                     <th
                       style={{
@@ -875,9 +935,19 @@ function SprintManager({ onBack }: SprintManagerProps) {
                         textAlign: "left",
                         fontWeight: "600",
                         color: "#495057",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onClick={() => handleSort("storyPoints")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#e9ecef";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                     >
-                      Story Points
+                      Story Points {getSortIcon("storyPoints")}
                     </th>
                     <th
                       style={{
@@ -885,9 +955,19 @@ function SprintManager({ onBack }: SprintManagerProps) {
                         textAlign: "left",
                         fontWeight: "600",
                         color: "#495057",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onClick={() => handleSort("status")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#e9ecef";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                     >
-                      Status
+                      Status {getSortIcon("status")}
                     </th>
                     <th
                       style={{
@@ -895,20 +975,39 @@ function SprintManager({ onBack }: SprintManagerProps) {
                         textAlign: "left",
                         fontWeight: "600",
                         color: "#495057",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onClick={() => handleSort("type")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#e9ecef";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                     >
-                      Type
+                      Type {getSortIcon("type")}
                     </th>
                     <th
                       style={{
                         padding: "12px 8px",
-
                         textAlign: "left",
                         fontWeight: "600",
                         color: "#495057",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onClick={() => handleSort("labels")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#e9ecef";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                     >
-                      Labels
+                      Labels {getSortIcon("labels")}
                     </th>
                     <th
                       style={{
@@ -916,200 +1015,207 @@ function SprintManager({ onBack }: SprintManagerProps) {
                         textAlign: "center",
                         fontWeight: "600",
                         color: "#495057",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onClick={() => handleSort("completed")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#e9ecef";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                     >
-                      Completed
+                      Completed {getSortIcon("completed")}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sprintTickets
-                    .sort((a, b) =>
-                      (a.assignee || "").localeCompare(b.assignee || "")
-                    )
-                    .map((ticket) => {
-                      const isCompleted = [
-                        "Done",
-                        "Closed",
-                        "Resolved",
-                        "Accepted",
-                        "Released",
-                        "Approved",
-                      ].includes(ticket.status);
-                      return (
-                        <tr
-                          key={ticket.key}
+                  {getSortedTickets().map((ticket) => {
+                    const isCompleted = [
+                      "Done",
+                      "Closed",
+                      "Resolved",
+                      "Accepted",
+                      "Released",
+                      "Approved",
+                    ].includes(ticket.status);
+                    return (
+                      <tr
+                        key={ticket.key}
+                        style={{
+                          borderBottom: "1px solid #e9ecef",
+                          backgroundColor: "white",
+                        }}
+                      >
+                        <td
                           style={{
-                            borderBottom: "1px solid #e9ecef",
-                            backgroundColor: "white",
+                            padding: "12px 8px",
+                            color: "#495057",
                           }}
                         >
-                          <td
-                            style={{
-                              padding: "12px 8px",
-                              color: "#495057",
-                            }}
-                          >
-                            <div style={{ fontWeight: "500" }}>
-                              <a
-                                href={getJiraUrl(ticket.key)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  color: "#007bff",
-                                  textDecoration: "none",
-                                  cursor: "pointer",
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.textDecoration =
-                                    "underline";
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.textDecoration = "none";
-                                }}
-                              >
-                                {ticket.key}
-                              </a>
-                            </div>
-                            <div style={{ fontSize: "12px", color: "#6c757d" }}>
-                              {ticket.summary}
-                            </div>
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 8px",
-                              color: "#495057",
-                            }}
-                          >
-                            {ticket.assignee}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 8px",
-                              color: "#495057",
-                              textAlign: "center",
-                            }}
-                          >
-                            {ticket.storyPoints || 0}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 8px",
-                              color: "#495057",
-                            }}
-                          >
-                            <span
+                          <div style={{ fontWeight: "500" }}>
+                            <a
+                              href={getJiraUrl(ticket.key)}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               style={{
-                                padding: "4px 8px",
-                                borderRadius: "12px",
-                                fontSize: "12px",
-                                fontWeight: "500",
-                                backgroundColor: [
-                                  "Done",
-                                  "Closed",
-                                  "Resolved",
-                                  "Accepted",
-                                  "Released",
-                                  "Approved",
-                                ].includes(ticket.status)
-                                  ? "#E8F5E8" // Light green background for completed
-                                  : "#F5F5F5", // Light gray background for other statuses
-                                color: [
-                                  "Done",
-                                  "Closed",
-                                  "Resolved",
-                                  "Accepted",
-                                  "Released",
-                                  "Approved",
-                                ].includes(ticket.status)
-                                  ? "#2E7D32" // Dark green text for completed
-                                  : "#666666", // Gray text for other statuses
+                                color: "#007bff",
+                                textDecoration: "none",
+                                cursor: "pointer",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.textDecoration =
+                                  "underline";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.textDecoration = "none";
                               }}
                             >
-                              {ticket.status}
+                              {ticket.key}
+                            </a>
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#6c757d" }}>
+                            {ticket.summary}
+                          </div>
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px 8px",
+                            color: "#495057",
+                          }}
+                        >
+                          {ticket.assignee}
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px 8px",
+                            color: "#495057",
+                            textAlign: "center",
+                          }}
+                        >
+                          {ticket.storyPoints || 0}
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px 8px",
+                            color: "#495057",
+                          }}
+                        >
+                          <span
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "12px",
+                              fontSize: "12px",
+                              fontWeight: "500",
+                              backgroundColor: [
+                                "Done",
+                                "Closed",
+                                "Resolved",
+                                "Accepted",
+                                "Released",
+                                "Approved",
+                              ].includes(ticket.status)
+                                ? "#E8F5E8" // Light green background for completed
+                                : "#F5F5F5", // Light gray background for other statuses
+                              color: [
+                                "Done",
+                                "Closed",
+                                "Resolved",
+                                "Accepted",
+                                "Released",
+                                "Approved",
+                              ].includes(ticket.status)
+                                ? "#2E7D32" // Dark green text for completed
+                                : "#666666", // Gray text for other statuses
+                            }}
+                          >
+                            {ticket.status}
+                          </span>
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px 8px",
+                            color: "#495057",
+                          }}
+                        >
+                          {ticket.type}
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px 8px",
+                            color: "#495057",
+                          }}
+                        >
+                          {ticket.labels &&
+                            ticket.labels.length > 0 &&
+                            ticket.labels.map((label, index) => {
+                              let backgroundColor = "#F5F5F5";
+                              let textColor = "#666666";
+
+                              if (label.toLowerCase().includes("claude")) {
+                                backgroundColor = "#FFF3E0";
+                                textColor = "#E65100";
+                              } else if (
+                                label.toLowerCase().includes("extra")
+                              ) {
+                                backgroundColor = "#FCE4EC";
+                                textColor = "#C2185B";
+                              } else if (
+                                label.toLowerCase().includes("unplanned")
+                              ) {
+                                backgroundColor = "#F3E5F5";
+                                textColor = "#7B1FA2";
+                              }
+
+                              return (
+                                <span
+                                  key={index}
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: "12px",
+                                    fontSize: "12px",
+                                    fontWeight: "500",
+                                    backgroundColor,
+                                    color: textColor,
+                                    marginRight: "4px",
+                                    display: "inline-block",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  {label}
+                                </span>
+                              );
+                            })}
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px 8px",
+                            textAlign: "center",
+                            color: "#495057",
+                          }}
+                        >
+                          {isCompleted ? (
+                            <span
+                              style={{ color: "#7ED321", fontSize: "18px" }}
+                            >
+                              ✓
                             </span>
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 8px",
-                              color: "#495057",
-                            }}
-                          >
-                            {ticket.type}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 8px",
-                              color: "#495057",
-                            }}
-                          >
-                            {ticket.labels &&
-                              ticket.labels.length > 0 &&
-                              ticket.labels.map((label, index) => {
-                                let backgroundColor = "#F5F5F5";
-                                let textColor = "#666666";
-
-                                if (label.toLowerCase().includes("claude")) {
-                                  backgroundColor = "#FFF3E0";
-                                  textColor = "#E65100";
-                                } else if (
-                                  label.toLowerCase().includes("extra")
-                                ) {
-                                  backgroundColor = "#FCE4EC";
-                                  textColor = "#C2185B";
-                                } else if (
-                                  label.toLowerCase().includes("unplanned")
-                                ) {
-                                  backgroundColor = "#F3E5F5";
-                                  textColor = "#7B1FA2";
-                                }
-
-                                return (
-                                  <span
-                                    key={index}
-                                    style={{
-                                      padding: "4px 8px",
-                                      borderRadius: "12px",
-                                      fontSize: "12px",
-                                      fontWeight: "500",
-                                      backgroundColor,
-                                      color: textColor,
-                                      marginRight: "4px",
-                                      display: "inline-block",
-                                      marginBottom: "4px",
-                                    }}
-                                  >
-                                    {label}
-                                  </span>
-                                );
-                              })}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 8px",
-                              textAlign: "center",
-                              color: "#495057",
-                            }}
-                          >
-                            {isCompleted ? (
-                              <span
-                                style={{ color: "#7ED321", fontSize: "18px" }}
-                              >
-                                ✓
-                              </span>
-                            ) : (
-                              <span
-                                style={{ color: "#D0021B", fontSize: "18px" }}
-                              >
-                                ✗
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          ) : (
+                            <span
+                              style={{ color: "#D0021B", fontSize: "18px" }}
+                            >
+                              ✗
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+
               {sprintTickets.length === 0 && (
                 <div
                   style={{

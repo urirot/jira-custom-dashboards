@@ -45,16 +45,16 @@ function EpicManager({ onBack }: EpicManagerProps) {
   const scrollStartX = React.useRef(0);
   const [diagramRendered, setDiagramRendered] = useState(0);
 
-  const onMouseMove = (e: MouseEvent) => {
+  const onMouseMove = useCallback((e: MouseEvent) => {
     if (isDragging.current && diagramScrollRef.current) {
       const dx = e.clientX - dragStartX.current;
       diagramScrollRef.current.scrollLeft = scrollStartX.current - dx;
     }
-  };
-  const onMouseUp = () => {
+  }, []);
+  const onMouseUp = useCallback(() => {
     isDragging.current = false;
     document.body.style.cursor = "";
-  };
+  }, []);
 
   React.useEffect(() => {
     window.addEventListener("mousemove", onMouseMove);
@@ -63,7 +63,7 @@ function EpicManager({ onBack }: EpicManagerProps) {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, []);
+  }, [onMouseMove, onMouseUp]);
 
   // Always fetch projects fresh on component mount
   useEffect(() => {

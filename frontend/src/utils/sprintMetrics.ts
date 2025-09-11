@@ -26,10 +26,6 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
   // Filter out tickets without story points or with 0.1 story points for meaningful analysis
   const validTickets = tickets.filter(t => (t.storyPoints || 0) > 0.1);
   
-  // Debug: Log all unique statuses to help identify what statuses are actually being used
-  const uniqueStatuses = Array.from(new Set(tickets.map(t => t.status)));
-  console.log('Available statuses in tickets:', uniqueStatuses);
-  
   // Top Stats
   const totalTickets = validTickets.length;
   const completedTickets = validTickets.filter(t => isCompleted(t.status)).length;
@@ -40,16 +36,8 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
     .filter(t => isCompleted(t.status))
     .reduce((sum, t) => sum + (t.storyPoints || 0), 0) * 10) / 10;
   
-  // Debug: Log calculation details
-  console.log('Sprint Metrics Calculation:', {
-    totalTickets: tickets.length,
-    validTickets: validTickets.length,
-    ticketsWithLowStoryPoints: tickets.filter(t => (t.storyPoints || 0) > 0 && (t.storyPoints || 0) <= 0.1).length,
-    completedTickets,
-    totalStoryPoints,
-    completedStoryPoints,
-    completionPercentage: totalStoryPoints > 0 ? Math.round((completedStoryPoints / totalStoryPoints) * 100) : 0
-  });
+  
+  // Calculate sprint metrics
   
   const velocity = completedStoryPoints;
   const averageVelocity = totalStoryPoints > 0 ? Math.round((completedStoryPoints / totalTickets) * 100) / 100 : 0;
@@ -93,13 +81,13 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
     efficiency: stats.storyPoints > 0 ? Math.round((stats.completedStoryPoints / stats.storyPoints) * 100) : 0
   })).sort((a, b) => b.efficiency - a.efficiency);
 
-  // Status Breakdown
+  // Status Breakdown (excluding archived tickets)
   const statusBreakdown = validTickets.reduce((acc, t) => {
     acc[t.status] = (acc[t.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  // Epic Analysis
+  // Epic Analysis (excluding archived tickets)
   const epicMap = new Map<string, { tickets: number; storyPoints: number }>();
   validTickets.forEach(ticket => {
     const epic = ticket.epic || 'No Epic';
@@ -115,7 +103,7 @@ export function calculateSprintMetrics(tickets: Ticket[]): SprintMetrics {
     percentage: Math.round((stats.storyPoints / totalStoryPoints) * 100)
   })).sort((a, b) => b.storyPoints - a.storyPoints);
 
-  // Type Analysis
+  // Type Analysis (excluding archived tickets)
   const typeMap = new Map<string, { tickets: number; storyPoints: number }>();
   validTickets.forEach(ticket => {
     const type = ticket.type;
